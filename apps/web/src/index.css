@@ -1,0 +1,51 @@
+@import url('https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&family=Libre+Caslon+Text:ital,wght@0,400;0,700;1,400&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 36 33% 97%;
+    --foreground: 20 10% 8%;
+    --card: 0 0% 100%;
+    --card-foreground: 20 10% 8%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 20 10% 8%;
+    --primary: 20 10% 8%;
+    --primary-foreground: 36 33% 97%;
+    --secondary: 36 18% 92%;
+    --secondary-foreground: 20 10% 8%;
+    --muted: 36 14% 90%;
+    --muted-foreground: 24 6% 38%;
+    --accent: 36 18% 92%;
+    --accent-foreground: 20 10% 8%;
+    --destructive: 8 72% 42%;
+    --destructive-foreground: 36 33% 97%;
+    --border: 24 10% 82%;
+    --input: 24 10% 82%;
+    --ring: 8 72% 42%;
+    --signal: 8 72% 42%;
+    --radius: 0.125rem;
+  }
+}
+
+body {
+  font-family: "Archivo", sans-serif;
+  overflow-x: clip;
+  background-color: hsl(var(--background));
+  color: hsl(var(--foreground));
+}
+
+.font-display {
+  font-family: "Libre Caslon Text", Georgia, serif;
+}
+
+@layer utilities {
+  .text-signal { color: hsl(var(--signal)); }
+  .bg-signal { background-color: hsl(var(--signal)); }
+  .border-signal { border-color: hsl(var(--signal)); }
+  .shadow-hard { box-shadow: 6px 6px 0 0 hsl(var(--foreground)); }
+  .shadow-hard-sm { box-shadow: 3px 3px 0 0 hsl(var(--foreground)); }
+  .shadow-hard-signal { box-shadow: 6px 6px 0 0 hsl(var(--signal)); }
+}
