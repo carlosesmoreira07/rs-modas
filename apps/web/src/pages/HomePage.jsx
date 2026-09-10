@@ -1,154 +1,174 @@
 import React from "react";
 import { Helmet } from "react-helmet";
 import { Link } from "react-router-dom";
-import { ArrowRight, MessageCircle, Truck, BadgeCheck } from "lucide-react";
+import { ArrowRight, BadgeCheck, Instagram, MapPin, MessageCircle, Sparkles } from "lucide-react";
 import Reveal from "@/components/Reveal";
-import { CornerFrame, ProductCard } from "@/components/chrome";
+import { ProductCard } from "@/components/chrome";
 import { useStore, HERO_IMAGE, productStatus } from "@/lib/store";
 
+const styleLinks = [
+  { title: "Jeans para todos os dias", copy: "Modelagens que acompanham sua rotina.", to: "/catalogo?categoria=Cal%C3%A7as", number: "01" },
+  { title: "Leve & arrumado", copy: "Vestidos e conjuntos para sair sem complicar.", to: "/catalogo?categoria=Vestidos", number: "02" },
+  { title: "Camadas com personalidade", copy: "Blusas, camisas e jaquetas para combinar.", to: "/catalogo?categoria=Blusas", number: "03" },
+];
+
 export default function HomePage() {
-  const { products, config } = useStore();
-  const visible = products.filter((p) => !p.archived);
-  const news = [...visible].sort((a, b) => b.createdAt - a.createdAt).slice(0, 4);
-  const available = visible
-    .filter((p) => productStatus(p, config.lowStockThreshold) !== "indisponivel")
-    .slice(0, 8);
-  const categories = [...new Set(visible.map((p) => p.category))];
+  const { products, config, brands } = useStore();
+  const visible = products.filter((product) => !product.archived);
+  const featured = visible.filter((product) => productStatus(product, config.lowStockThreshold) !== "indisponivel").slice(0, 4);
+  const categoryNames = ["Calças", "Vestidos", "Conjuntos", "Blusas", "Jaquetas", "Shorts"];
+  const categories = categoryNames
+    .map((name) => ({ name, product: visible.find((product) => product.category === name) }))
+    .filter((item) => item.product);
+  const heroProduct = visible.find((product) => product.brand === "Pit Bull Jeans") || visible[0];
   const wa = config.whatsapp ? `https://wa.me/${config.whatsapp.replace(/\D/g, "")}` : null;
+  const mapLink = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(config.address)}`;
 
   return (
     <>
       <Helmet>
-        <title>RS Modas — Moda em Botucatu/SP</title>
-        <meta name="description" content="Vitrine da RS Modas em Botucatu/SP: roupas e jeans com consulta direta pelo WhatsApp. Revendedora autorizada Pit Bull Jeans." />
+        <title>RS Modas — Boutique multimarcas em Botucatu</title>
+        <meta name="description" content="Curadoria multimarcas da RS Modas em Botucatu: Pit Bull Jeans, Rhero, Maria Dondoca e outras marcas, com atendimento pelo WhatsApp." />
       </Helmet>
 
-      <section aria-label="Destaque">
-        <div className="relative h-[52dvh] overflow-hidden md:h-[68dvh]">
-          <img
-            src={HERO_IMAGE}
-            alt="Modelo usando jeans e camisa branca em fundo claro"
-            className="h-full w-full object-cover object-top"
-          />
+      <section className="page-shell py-5 sm:py-8 lg:py-10" aria-labelledby="hero-title">
+        <div className="grid overflow-hidden rounded-[var(--radius-editorial)] bg-secondary lg:min-h-[620px] lg:grid-cols-[0.86fr_1.14fr]">
+          <div className="relative z-10 flex flex-col justify-center px-6 py-10 sm:px-10 lg:px-14 lg:py-16">
+            <p className="eyebrow">Boutique multimarcas · Botucatu</p>
+            <h1 id="hero-title" className="mt-5 max-w-xl font-display text-4xl leading-[1.06] tracking-[-0.04em] sm:text-5xl lg:text-6xl">
+              Seu estilo, <em className="font-normal text-signal">suas escolhas.</em>
+            </h1>
+            <p className="mt-5 max-w-md text-base leading-relaxed text-muted-foreground lg:text-lg">
+              Uma curadoria feminina para vestir a vida real — com jeans, peças leves e atendimento de perto.
+            </p>
+            <div className="mt-7 flex flex-col gap-3 sm:flex-row">
+              <Link to="/catalogo" className="button-dark">Explorar coleção <ArrowRight className="h-4 w-4" /></Link>
+              {wa && <a href={wa} target="_blank" rel="noreferrer" className="button-light"><MessageCircle className="h-4 w-4" /> Falar com a loja</a>}
+            </div>
+            <div className="mt-8 flex items-center gap-3 border-t border-foreground/10 pt-5 text-sm text-muted-foreground">
+              <BadgeCheck className="h-5 w-5 shrink-0 text-signal" />
+              <span>Revendedora autorizada do grupo Pit Bull Jeans, Rhero e Maria Dondoca.</span>
+            </div>
+          </div>
+
+          <div className="relative min-h-[410px] overflow-hidden lg:min-h-0">
+            <img
+              src={HERO_IMAGE}
+              alt="Mulher com camisa branca e jeans em composição editorial clara"
+              width="900"
+              height="1100"
+              fetchPriority="high"
+              className="absolute inset-0 h-full w-full object-cover object-right"
+            />
+            <div className="absolute bottom-4 left-4 right-4 flex items-end justify-between gap-3 rounded-2xl bg-white/92 p-4 shadow-soft backdrop-blur-md sm:bottom-6 sm:left-6 sm:right-auto sm:w-72">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-[0.13em] text-signal">Em destaque</p>
+                <p className="mt-1 font-display text-lg leading-snug">{heroProduct?.name}</p>
+              </div>
+              {heroProduct && <Link to={`/produto/${heroProduct.id}`} aria-label={`Ver ${heroProduct.name}`} className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-foreground text-background hover:bg-signal"><ArrowRight className="h-4 w-4" /></Link>}
+            </div>
+          </div>
         </div>
-        <div className="mx-auto max-w-6xl px-4">
-          <CornerFrame className="relative z-10 -mt-20 max-w-xl md:-mt-36">
-            <div className="border border-foreground bg-background p-6 shadow-hard md:p-9">
-              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-signal">Botucatu/SP</p>
-              <h1 className="mt-3 font-display text-3xl leading-tight md:text-5xl">
-                Seu próximo look está aqui.
-              </h1>
-              <p className="mt-3 text-sm leading-relaxed text-muted-foreground md:text-base">
-                Roupas e jeans escolhidos a dedo, com atendimento de perto e consulta direta pelo WhatsApp.
-              </p>
-              <Link
-                to="/catalogo"
-                className="mt-5 inline-flex h-12 items-center gap-2 border border-foreground bg-foreground px-6 text-sm font-semibold text-background transition-colors hover:bg-signal"
-              >
-                Explorar produtos <ArrowRight className="h-4 w-4" />
+      </section>
+
+      <section className="page-shell py-12 lg:py-16" aria-labelledby="categories-title">
+        <Reveal>
+          <div className="flex items-end justify-between gap-5">
+            <div>
+              <p className="eyebrow">Comece por aqui</p>
+              <h2 id="categories-title" className="mt-2 font-display text-3xl tracking-[-0.03em] sm:text-4xl">Escolha pelo que você procura</h2>
+            </div>
+            <Link to="/catalogo" className="hidden items-center gap-2 text-sm font-semibold hover:text-signal sm:flex">Ver tudo <ArrowRight className="h-4 w-4" /></Link>
+          </div>
+        </Reveal>
+        <div className="mt-7 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6 lg:gap-4">
+          {categories.map(({ name, product }, index) => (
+            <Reveal key={name} delay={index * 0.04}>
+              <Link to={`/catalogo?categoria=${encodeURIComponent(name)}`} className="group relative block aspect-[4/5] overflow-hidden rounded-[var(--radius-card)] bg-secondary">
+                <img src={product.photos[0]} alt="" loading="lazy" className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-[1.035]" />
+                <div className="absolute inset-x-0 bottom-0 bg-foreground/82 px-4 py-3 text-center text-sm font-semibold text-white backdrop-blur-sm">{name}</div>
               </Link>
-            </div>
-          </CornerFrame>
-        </div>
-      </section>
-
-      <section aria-label="Categorias" className="mx-auto max-w-6xl px-4 pt-14">
-        <div className="flex flex-wrap gap-2">
-          {categories.map((c) => (
-            <Link
-              key={c}
-              to={`/catalogo?categoria=${encodeURIComponent(c)}`}
-              className="border border-foreground bg-card px-4 py-2 text-sm transition-colors hover:bg-foreground hover:text-background"
-            >
-              {c}
-            </Link>
-          ))}
-        </div>
-      </section>
-
-      <section aria-label="Novidades" className="mx-auto max-w-6xl px-4 pt-14">
-        <Reveal>
-          <div className="flex items-end justify-between gap-4">
-            <h2 className="font-display text-2xl md:text-3xl">Novidades</h2>
-            <Link to="/catalogo" className="text-sm font-medium hover:text-signal hover:underline underline-offset-4">
-              Ver tudo
-            </Link>
-          </div>
-        </Reveal>
-        <div className="mt-6 grid grid-cols-2 gap-4 md:gap-6 lg:grid-cols-4">
-          {news.map((p, i) => (
-            <Reveal key={p.id} delay={i * 0.06}>
-              <ProductCard product={p} />
             </Reveal>
           ))}
         </div>
       </section>
 
-      <section aria-label="Peças disponíveis" className="mx-auto max-w-6xl px-4 pt-16">
-        <Reveal>
-          <div className="flex items-end justify-between gap-4 border-t border-foreground pt-10">
-            <h2 className="font-display text-2xl md:text-3xl">Peças disponíveis</h2>
-            <Link to="/catalogo" className="text-sm font-medium hover:text-signal hover:underline underline-offset-4">
-              Catálogo completo
-            </Link>
+      <section className="bg-card py-14 lg:py-20" aria-labelledby="featured-title">
+        <div className="page-shell">
+          <Reveal>
+            <div className="grid gap-4 md:grid-cols-[1fr_auto] md:items-end">
+              <div>
+                <p className="eyebrow">Seleção RS</p>
+                <h2 id="featured-title" className="mt-2 font-display text-3xl tracking-[-0.03em] sm:text-4xl">Peças para olhar de perto</h2>
+                <p className="mt-3 max-w-xl text-sm leading-relaxed text-muted-foreground">Destaques da nossa vitrine atual. Escolha cor e tamanho antes de consultar a disponibilidade.</p>
+              </div>
+              <Link to="/catalogo" className="button-light justify-self-start">Catálogo completo <ArrowRight className="h-4 w-4" /></Link>
+            </div>
+          </Reveal>
+          <div className="mt-8 grid grid-cols-2 gap-x-3 gap-y-8 sm:gap-x-5 lg:grid-cols-4 lg:gap-x-7">
+            {featured.map((product, index) => <Reveal key={product.id} delay={index * 0.05}><ProductCard product={product} /></Reveal>)}
           </div>
+        </div>
+      </section>
+
+      <section className="page-shell py-14 lg:py-20" aria-labelledby="style-title">
+        <Reveal>
+          <p className="eyebrow">Encontre seu estilo</p>
+          <h2 id="style-title" className="mt-2 max-w-2xl font-display text-3xl tracking-[-0.03em] sm:text-4xl">Atalhos para chegar ao look que combina com seu momento</h2>
         </Reveal>
-        <div className="mt-6 grid grid-cols-2 gap-4 md:grid-cols-4 md:gap-6">
-          {available.map((p, i) => (
-            <Reveal key={p.id} delay={i * 0.05}>
-              <ProductCard product={p} />
+        <div className="mt-8 divide-y divide-border border-y border-border">
+          {styleLinks.map((item, index) => (
+            <Reveal key={item.title} delay={index * 0.04}>
+              <Link to={item.to} className="group grid gap-3 py-6 sm:grid-cols-[4rem_1fr_auto] sm:items-center sm:gap-5 lg:py-8">
+                <span className="font-display text-2xl italic text-gold">{item.number}</span>
+                <span>
+                  <span className="block font-display text-2xl tracking-[-0.02em] group-hover:text-signal">{item.title}</span>
+                  <span className="mt-1 block text-sm text-muted-foreground">{item.copy}</span>
+                </span>
+                <span className="grid h-11 w-11 place-items-center rounded-full border border-border transition-colors group-hover:border-foreground group-hover:bg-foreground group-hover:text-background"><ArrowRight className="h-4 w-4" /></span>
+              </Link>
             </Reveal>
           ))}
         </div>
       </section>
 
-      <section aria-label="Revenda autorizada" className="mx-auto max-w-6xl px-4 pt-16">
+      <section id="marcas" className="page-shell pb-14 lg:pb-20" aria-labelledby="brands-title">
         <Reveal>
-          <div className="grid gap-6 border border-foreground bg-card p-6 shadow-hard-sm md:grid-cols-2 md:p-10">
-            <div className="flex items-start gap-4">
-              <BadgeCheck className="mt-1 h-6 w-6 shrink-0 text-signal" strokeWidth={1.75} />
-              <div>
-                <h2 className="font-display text-xl md:text-2xl">Revendedora autorizada Pit Bull Jeans</h2>
-                <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
-                  A RS Modas é revendedora autorizada da Pit Bull Jeans, com preços alinhados aos praticados pela marca
-                  e fornecedor disponível para reposição de peças.
-                </p>
-              </div>
+          <div className="rounded-[var(--radius-editorial)] border border-border bg-secondary p-7 sm:p-10 lg:grid lg:grid-cols-[0.8fr_1.2fr] lg:items-center lg:gap-14 lg:p-14">
+            <div>
+              <p className="eyebrow">Nossa curadoria</p>
+              <h2 id="brands-title" className="mt-2 font-display text-3xl tracking-[-0.03em] sm:text-4xl">As marcas entram. A escolha tem assinatura RS.</h2>
             </div>
-            <div className="flex items-start gap-4">
-              <Truck className="mt-1 h-6 w-6 shrink-0 text-signal" strokeWidth={1.75} />
-              <div>
-                <h2 className="font-display text-xl md:text-2xl">Atendimento e entrega local</h2>
-                <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{config.serviceInfo}</p>
+            <div className="mt-8 lg:mt-0">
+              <div className="flex flex-wrap gap-2.5">
+                {brands.map((brand) => <Link key={brand} to={`/catalogo?marca=${encodeURIComponent(brand)}`} className="rounded-full border border-border bg-card px-5 py-3 text-sm font-semibold hover:border-foreground">{brand}</Link>)}
               </div>
+              <p className="mt-5 text-sm leading-relaxed text-muted-foreground">Pit Bull Jeans, Rhero e Maria Dondoca pertencem ao mesmo grupo. A RS Modas trabalha como revendedora autorizada e pode ampliar sua seleção com novas marcas.</p>
             </div>
           </div>
         </Reveal>
       </section>
 
-      <section id="atendimento" aria-label="Atendimento" className="mx-auto max-w-6xl px-4 py-16">
-        <Reveal>
-          <CornerFrame className="mx-auto max-w-2xl">
-            <div className="border border-foreground bg-foreground p-8 text-center text-background md:p-12">
-              <h2 className="font-display text-2xl md:text-3xl">Fale com a loja</h2>
-              <p className="mx-auto mt-3 max-w-md text-sm leading-relaxed text-background/70">
-                Tire dúvidas sobre tamanhos, cores e disponibilidade diretamente pelo WhatsApp. Sem cadastro, sem compromisso.
-              </p>
-              {wa ? (
-                <a
-                  href={wa}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="mt-6 inline-flex h-12 items-center gap-2 border border-background bg-background px-6 text-sm font-semibold text-foreground transition-colors hover:bg-signal hover:text-background hover:border-signal"
-                >
-                  <MessageCircle className="h-4 w-4" /> Conversar pelo WhatsApp
-                </a>
-              ) : (
-                <p className="mt-6 text-sm text-background/60">Número de WhatsApp a configurar pela loja.</p>
-              )}
+      <section id="loja" className="bg-foreground py-14 text-background lg:py-20" aria-labelledby="store-title">
+        <div className="page-shell grid gap-10 lg:grid-cols-[1fr_0.9fr] lg:items-center">
+          <Reveal>
+            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-gold">Atendimento local</p>
+            <h2 id="store-title" className="mt-3 max-w-xl font-display text-3xl tracking-[-0.03em] sm:text-4xl">Venha escolher com calma em Botucatu.</h2>
+            <p className="mt-4 max-w-xl text-sm leading-relaxed text-background/65">{config.serviceInfo}</p>
+            <div className="mt-7 flex flex-col gap-3 sm:flex-row">
+              <a href={mapLink} target="_blank" rel="noreferrer" className="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl bg-background px-5 text-sm font-semibold text-foreground hover:bg-gold"><MapPin className="h-4 w-4" /> Como chegar</a>
+              {wa && <a href={wa} target="_blank" rel="noreferrer" className="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl border border-white/20 px-5 text-sm font-semibold hover:border-white"><MessageCircle className="h-4 w-4" /> Consultar atendimento</a>}
             </div>
-          </CornerFrame>
-        </Reveal>
+          </Reveal>
+          <Reveal delay={0.08}>
+            <div className="rounded-[var(--radius-editorial)] border border-white/15 bg-white/5 p-6 sm:p-8">
+              <MapPin className="h-6 w-6 text-gold" />
+              <p className="mt-5 font-display text-2xl leading-snug">{config.address}</p>
+              <p className="mt-3 text-sm text-background/55">Confirme horário e condições de atendimento diretamente com a loja.</p>
+              {config.instagram && <a href={config.instagram} target="_blank" rel="noreferrer" className="mt-6 inline-flex items-center gap-2 text-sm font-semibold text-gold hover:text-white"><Instagram className="h-4 w-4" /> Acompanhar novidades no Instagram</a>}
+            </div>
+          </Reveal>
+        </div>
       </section>
     </>
   );

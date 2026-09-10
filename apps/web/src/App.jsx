@@ -10,7 +10,7 @@ import AdminPage from './pages/AdminPage';
 
 function Layout() {
     return (
-        <div className="flex min-h-[100dvh] flex-col pt-7">
+        <div className="flex min-h-[100dvh] flex-col pt-8">
             <DemoNotice />
             <Header />
             <main className="flex-1">

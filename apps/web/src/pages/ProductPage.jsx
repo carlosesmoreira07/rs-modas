@@ -1,52 +1,37 @@
 import React, { useMemo, useState } from "react";
 import { Helmet } from "react-helmet";
 import { Link, useParams } from "react-router-dom";
-import { MessageCircle, ArrowLeft } from "lucide-react";
-import { CornerFrame, ProductImage, EmptyState } from "@/components/chrome";
+import { ArrowLeft, Check, Heart, MessageCircle, ShieldCheck } from "lucide-react";
+import { ProductImage, EmptyState } from "@/components/chrome";
 import { useStore, formatBRL, availableOf, buildWhatsAppMessage, waLink } from "@/lib/store";
 import { cn } from "@/lib/utils";
 
 export default function ProductPage() {
   const { id } = useParams();
-  const { products, config } = useStore();
-  const product = products.find((p) => p.id === id && !p.archived);
-
+  const { products, config, favorites, toggleFavorite } = useStore();
+  const product = products.find((item) => item.id === id && !item.archived);
   const [photoIndex, setPhotoIndex] = useState(0);
   const [color, setColor] = useState(null);
   const [size, setSize] = useState(null);
   const [showPreview, setShowPreview] = useState(false);
 
-  const colors = useMemo(
-    () => (product ? [...new Set(product.variations.map((v) => v.color))] : []),
-    [product]
-  );
+  const colors = useMemo(() => product ? [...new Set(product.variations.map((variation) => variation.color))] : [], [product]);
+  const allSizes = useMemo(() => product ? [...new Set(product.variations.map((variation) => variation.size))] : [], [product]);
   const sizesForColor = useMemo(() => {
-    if (!product) return [];
-    const vars = color ? product.variations.filter((v) => v.color === color) : product.variations;
-    return [...new Set(vars.map((v) => v.size))];
-  }, [product, color]);
-
+    if (!product || !color) return allSizes;
+    return [...new Set(product.variations.filter((variation) => variation.color === color).map((variation) => variation.size))];
+  }, [product, color, allSizes]);
   const variation = useMemo(() => {
     if (!product || !color || !size) return null;
-    return product.variations.find((v) => v.color === color && v.size === size) || null;
+    return product.variations.find((item) => item.color === color && item.size === size) || null;
   }, [product, color, size]);
 
   if (!product) {
     return (
-      <div className="mx-auto max-w-6xl px-4 py-16">
-        <Helmet>
-          <title>Produto não encontrado — RS Modas</title>
-          <meta name="description" content="A peça procurada não está disponível no catálogo da RS Modas." />
-        </Helmet>
-        <EmptyState
-          title="Peça não encontrada"
-          action={
-            <Link to="/catalogo" className="mt-1 inline-flex h-11 items-center border border-foreground bg-foreground px-5 text-sm font-semibold text-background hover:bg-signal">
-              Voltar ao catálogo
-            </Link>
-          }
-        >
-          <p>Ela pode ter sido arquivada ou o endereço está incorreto.</p>
+      <div className="page-shell py-16">
+        <Helmet><title>Produto não encontrado — RS Modas</title></Helmet>
+        <EmptyState title="Peça não encontrada" action={<Link to="/catalogo" className="button-dark mt-2">Voltar ao catálogo</Link>}>
+          <p>Ela pode ter sido arquivada ou o endereço não está mais disponível.</p>
         </EmptyState>
       </div>
     );
@@ -56,168 +41,120 @@ export default function ProductPage() {
   const kind = variation && available === 0 ? "encomenda" : "consulta";
   const message = variation ? buildWhatsAppMessage({ product, variation, kind }) : "";
   const link = variation ? waLink(config.whatsapp, message) : null;
+  const favorite = favorites.includes(product.id);
 
-  const selectColor = (c) => {
-    setColor(c);
+  const selectColor = (nextColor) => {
+    setColor(nextColor);
     setSize(null);
     setShowPreview(false);
-  };
-
-  const handleMainAction = () => {
-    if (!variation) return;
-    setShowPreview(true);
   };
 
   return (
     <>
       <Helmet>
         <title>{product.name} — RS Modas</title>
-        <meta name="description" content={`${product.name} na RS Modas, Botucatu/SP. Consulte tamanhos, cores e disponibilidade pelo WhatsApp.`} />
+        <meta name="description" content={`${product.name}, ${product.brand}, na RS Modas em Botucatu. Consulte tamanhos, cores e disponibilidade pelo WhatsApp.`} />
       </Helmet>
 
-      <div className="mx-auto max-w-6xl px-4 py-6 md:py-10">
-        <Link to="/catalogo" className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-signal">
+      <div className="page-shell py-6 sm:py-10">
+        <Link to="/catalogo" className="inline-flex min-h-11 items-center gap-2 rounded-lg text-sm font-semibold text-muted-foreground hover:text-signal">
           <ArrowLeft className="h-4 w-4" /> Voltar ao catálogo
         </Link>
 
-        <div className="mt-5 grid gap-8 md:grid-cols-2">
-          <div>
-            <CornerFrame>
-              <div className="aspect-[3/4] border border-foreground bg-secondary shadow-hard-sm">
-                <ProductImage
-                  src={product.photos[photoIndex] || product.photos[0]}
-                  alt={product.name}
-                  className="h-full w-full"
-                />
-              </div>
-            </CornerFrame>
+        <div className="mt-4 grid gap-8 lg:grid-cols-[1.08fr_0.92fr] lg:gap-14">
+          <div className="lg:grid lg:grid-cols-[82px_1fr] lg:gap-4">
             {product.photos.length > 1 && (
-              <div className="mt-4 flex gap-2">
-                {product.photos.map((src, i) => (
+              <div className="order-first mb-3 flex gap-2 overflow-x-auto pb-1 lg:mb-0 lg:flex-col" aria-label="Galeria do produto">
+                {product.photos.map((src, index) => (
                   <button
-                    key={i}
-                    onClick={() => setPhotoIndex(i)}
-                    aria-label={`Ver foto ${i + 1}`}
-                    className={cn(
-                      "h-16 w-16 overflow-hidden border bg-secondary",
-                      i === photoIndex ? "border-signal ring-1 ring-signal" : "border-foreground"
-                    )}
+                    key={src}
+                    onClick={() => setPhotoIndex(index)}
+                    aria-label={`Ver foto ${index + 1}`}
+                    aria-pressed={photoIndex === index}
+                    className={cn("h-20 w-16 shrink-0 overflow-hidden rounded-xl border bg-secondary lg:h-24 lg:w-full", photoIndex === index ? "border-foreground ring-2 ring-ring/20" : "border-border")}
                   >
                     <ProductImage src={src} alt="" className="h-full w-full" />
                   </button>
                 ))}
               </div>
             )}
+            <div className={cn("relative aspect-[3/4] overflow-hidden rounded-[var(--radius-editorial)] bg-secondary", product.photos.length <= 1 && "lg:col-span-2")}>
+              <ProductImage src={product.photos[photoIndex] || product.photos[0]} alt={product.name} eager className="h-full w-full" />
+              <button
+                onClick={() => toggleFavorite(product.id)}
+                aria-label={favorite ? "Remover dos favoritos" : "Adicionar aos favoritos"}
+                aria-pressed={favorite}
+                className={cn("absolute right-4 top-4 grid h-12 w-12 place-items-center rounded-full border border-white/80 bg-white/90 shadow-card backdrop-blur", favorite && "bg-foreground text-white")}
+              >
+                <Heart className={cn("h-5 w-5", favorite && "fill-current")} />
+              </button>
+            </div>
           </div>
 
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-signal">{product.category}</p>
-            <h1 className="mt-2 font-display text-3xl leading-tight md:text-4xl">{product.name}</h1>
-            <p className="mt-1 text-xs text-muted-foreground">Cód. {product.code} · {product.brand}</p>
-            <p className="mt-4 text-2xl font-semibold">{formatBRL(product.price)}</p>
+          <div className="lg:sticky lg:top-32 lg:self-start">
+            <p className="eyebrow">{product.brand}</p>
+            <h1 className="mt-3 max-w-xl font-display text-4xl leading-[1.08] tracking-[-0.04em] sm:text-5xl">{product.name}</h1>
+            <p className="mt-3 text-sm text-muted-foreground">Cód. {product.code} · {product.category}</p>
+            <p className="mt-6 text-2xl font-semibold tracking-tight">{formatBRL(product.price)}</p>
+            <p className="mt-5 text-base leading-relaxed text-muted-foreground">{product.description}</p>
 
-            <p className="mt-5 text-sm leading-relaxed text-muted-foreground">{product.description}</p>
-
-            <div className="mt-6">
-              <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Cor</p>
-              <div className="mt-2 flex flex-wrap gap-2" role="group" aria-label="Escolha a cor">
-                {colors.map((c) => (
-                  <button
-                    key={c}
-                    onClick={() => selectColor(c)}
-                    aria-pressed={color === c}
-                    className={cn(
-                      "h-11 border px-4 text-sm transition-colors",
-                      color === c
-                        ? "border-foreground bg-foreground text-background"
-                        : "border-foreground bg-card hover:bg-secondary"
-                    )}
-                  >
-                    {c}
+            <div className="mt-8 border-t border-border pt-7">
+              <div className="flex items-center justify-between gap-3">
+                <p className="text-sm font-semibold">Escolha a cor</p>
+                {color && <span className="text-xs text-muted-foreground">Selecionada: {color}</span>}
+              </div>
+              <div className="mt-3 flex flex-wrap gap-2" role="group" aria-label="Escolha a cor">
+                {colors.map((item) => (
+                  <button key={item} onClick={() => selectColor(item)} aria-pressed={color === item} className={cn("min-h-11 rounded-xl border px-4 text-sm font-medium transition-colors", color === item ? "border-foreground bg-foreground text-background" : "border-border bg-card hover:border-foreground")}>
+                    {color === item && <Check className="mr-1.5 inline h-3.5 w-3.5" />} {item}
                   </button>
                 ))}
               </div>
             </div>
 
-            <div className="mt-5">
-              <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Tamanho</p>
-              <div className="mt-2 flex flex-wrap gap-2" role="group" aria-label="Escolha o tamanho">
-                {sizesForColor.map((s) => {
-                  const v = product.variations.find((x) => x.size === s && (!color || x.color === color));
-                  const out = v ? availableOf(v) === 0 : false;
+            <div className="mt-6">
+              <div className="flex items-center justify-between gap-3">
+                <p className="text-sm font-semibold">Escolha o tamanho</p>
+                {!color && <span className="text-xs text-signal">Selecione uma cor primeiro</span>}
+              </div>
+              <div className="mt-3 flex flex-wrap gap-2" role="group" aria-label="Escolha o tamanho">
+                {sizesForColor.map((item) => {
+                  const itemVariation = color ? product.variations.find((candidate) => candidate.size === item && candidate.color === color) : null;
+                  const out = itemVariation ? availableOf(itemVariation) === 0 : false;
                   return (
                     <button
-                      key={s}
-                      onClick={() => { setSize(s); setShowPreview(false); }}
-                      aria-pressed={size === s}
-                      className={cn(
-                        "relative h-11 min-w-12 border px-3 text-sm transition-colors",
-                        size === s
-                          ? "border-foreground bg-foreground text-background"
-                          : "border-foreground bg-card hover:bg-secondary",
-                        out && size !== s && "text-muted-foreground"
-                      )}
+                      key={item}
+                      onClick={() => { setSize(item); setShowPreview(false); }}
+                      disabled={!color}
+                      aria-pressed={size === item}
+                      aria-label={`${item}${out ? ", indisponível para pronta entrega" : ""}`}
+                      className={cn("relative min-h-11 min-w-12 rounded-xl border px-3 text-sm font-semibold transition-colors", size === item ? "border-foreground bg-foreground text-background" : "border-border bg-card hover:border-foreground", !color && "cursor-not-allowed opacity-45", out && size !== item && "border-dashed text-muted-foreground")}
                     >
-                      {s}
-                      {out && <span className="absolute -top-2 right-1 text-[9px] font-semibold uppercase text-signal">sem estoque</span>}
+                      {item}
                     </button>
                   );
                 })}
               </div>
+              {variation && <p className={cn("mt-3 text-sm", available === 0 ? "font-medium text-signal" : "text-muted-foreground")} role="status">{available === 0 ? "Sem pronta entrega nesta variação. Consulte a possibilidade de encomenda." : `${available} ${available === 1 ? "unidade disponível" : "unidades disponíveis"} para consulta.`}</p>}
             </div>
 
-            <div className="mt-6 border-t border-border pt-5">
-              {!variation && (
-                <p className="mb-3 text-sm text-muted-foreground" role="status">
-                  Selecione a cor e o tamanho para consultar.
-                </p>
+            <div className="mt-7 rounded-[var(--radius-card)] bg-secondary p-4 sm:p-5">
+              {!variation && <p className="mb-3 text-sm text-muted-foreground" role="status">Escolha cor e tamanho para preparar sua consulta.</p>}
+              {variation && link ? (
+                <a href={link} target="_blank" rel="noreferrer" className="button-dark w-full px-4">
+                  <MessageCircle className="h-4 w-4" /> {available === 0 ? "Consultar encomenda" : "Consultar pelo WhatsApp"}
+                </a>
+              ) : (
+                <button disabled className="button-dark w-full cursor-not-allowed opacity-45"><MessageCircle className="h-4 w-4" /> Consultar pelo WhatsApp</button>
               )}
-              {variation && available === 0 && (
-                <p className="mb-3 text-sm font-medium text-signal" role="status">
-                  Esta variação está indisponível no momento. Você pode consultar a possibilidade de encomenda com a loja.
-                </p>
-              )}
-              <button
-                onClick={handleMainAction}
-                disabled={!variation}
-                className={cn(
-                  "flex h-12 w-full items-center justify-center gap-2 border border-foreground text-sm font-semibold transition-colors",
-                  variation
-                    ? "bg-foreground text-background hover:bg-signal"
-                    : "cursor-not-allowed bg-muted text-muted-foreground"
-                )}
-              >
-                <MessageCircle className="h-4 w-4" />
-                {variation && available === 0 ? "Consultar encomenda" : "Consultar pelo WhatsApp"}
-              </button>
-
+              {variation && <button onClick={() => setShowPreview((value) => !value)} className="mt-3 min-h-10 w-full text-xs font-semibold text-muted-foreground hover:text-foreground">{showPreview ? "Ocultar mensagem" : "Ver mensagem antes de abrir"}</button>}
               {showPreview && variation && (
-                <div className="mt-4 border border-foreground bg-card p-4 shadow-hard-sm">
-                  <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                    Prévia da mensagem
-                  </p>
+                <div className="mt-2 rounded-xl border border-border bg-card p-4">
+                  <p className="text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground">Mensagem preparada</p>
                   <pre className="mt-2 whitespace-pre-wrap font-sans text-sm leading-relaxed">{message}</pre>
-                  {link ? (
-                    <>
-                      <a
-                        href={link}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="mt-4 flex h-12 w-full items-center justify-center gap-2 border border-foreground bg-signal px-4 text-sm font-semibold text-white transition-opacity hover:opacity-90"
-                      >
-                        <MessageCircle className="h-4 w-4" /> Abrir conversa no WhatsApp
-                      </a>
-                      <p className="mt-2 text-xs text-muted-foreground">
-                        Abrir o WhatsApp não envia a mensagem automaticamente nem confirma pedido — a confirmação é feita pela loja na conversa.
-                      </p>
-                    </>
-                  ) : (
-                    <p className="mt-3 text-sm text-muted-foreground">
-                      O número de WhatsApp ainda não foi configurado pela loja. Esta é apenas a prévia da mensagem.
-                    </p>
-                  )}
                 </div>
               )}
+              <p className="mt-3 flex items-start gap-2 text-xs leading-relaxed text-muted-foreground"><ShieldCheck className="mt-0.5 h-4 w-4 shrink-0" /> A consulta não confirma pedido, reserva ou prazo. A loja confirma tudo na conversa.</p>
             </div>
           </div>
         </div>

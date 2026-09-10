@@ -1,37 +1,44 @@
 import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { Search, Menu, MessageCircle, Instagram, MapPin, Clock, ImageOff, X } from "lucide-react";
-import { useStore, formatBRL, productStatus, productAvailable } from "@/lib/store";
+import { Heart, ImageOff, Instagram, MapPin, Menu, MessageCircle, Search, Sparkles } from "lucide-react";
+import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
+import { useStore, formatBRL, productStatus } from "@/lib/store";
 import { cn } from "@/lib/utils";
+
+const mapsLink = (address) => address
+  ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(address)}`
+  : null;
+
+export function Logo({ compact = false }) {
+  return (
+    <span className="inline-flex items-center gap-3">
+      <span className={cn("grid shrink-0 place-items-center overflow-hidden rounded-full bg-black", compact ? "h-10 w-10" : "h-12 w-12")}>
+        <img src="/rs-modas-logo.png" alt="" width="150" height="150" className="h-full w-full object-contain" />
+      </span>
+      <span className={cn("font-display font-bold tracking-[-0.03em]", compact ? "text-lg" : "text-xl")}>RS Modas</span>
+    </span>
+  );
+}
 
 export function DemoNotice() {
   const { config } = useStore();
   return (
-    <div className="fixed inset-x-0 top-0 z-50 flex h-7 items-center justify-center bg-foreground px-3 text-background">
-      <p className="truncate text-[11px] tracking-wide">{config.demoNotice}</p>
+    <div className="fixed inset-x-0 top-0 z-[60] flex h-8 items-center justify-center bg-foreground px-4 text-background">
+      <p className="truncate text-xs tracking-wide">{config.demoNotice}</p>
     </div>
   );
 }
 
 export function CornerFrame({ children, className }) {
-  const c = "pointer-events-none absolute h-4 w-4 border-signal";
-  return (
-    <div className={cn("relative", className)}>
-      <span aria-hidden className={cn(c, "-left-1.5 -top-1.5 border-l-2 border-t-2")} />
-      <span aria-hidden className={cn(c, "-right-1.5 -top-1.5 border-r-2 border-t-2")} />
-      <span aria-hidden className={cn(c, "-bottom-1.5 -left-1.5 border-b-2 border-l-2")} />
-      <span aria-hidden className={cn(c, "-bottom-1.5 -right-1.5 border-b-2 border-r-2")} />
-      {children}
-    </div>
-  );
+  return <div className={cn("relative overflow-hidden rounded-[var(--radius-editorial)]", className)}>{children}</div>;
 }
 
-export function ProductImage({ src, alt, className }) {
+export function ProductImage({ src, alt, className, eager = false }) {
   const [failed, setFailed] = useState(false);
   if (!src || failed) {
     return (
       <div className={cn("flex flex-col items-center justify-center gap-2 bg-secondary text-muted-foreground", className)}>
-        <ImageOff className="h-8 w-8" strokeWidth={1.5} />
+        <ImageOff className="h-7 w-7" strokeWidth={1.5} />
         <span className="text-xs">Imagem indisponível</span>
       </div>
     );
@@ -40,7 +47,8 @@ export function ProductImage({ src, alt, className }) {
     <img
       src={src}
       alt={alt}
-      loading="lazy"
+      loading={eager ? "eager" : "lazy"}
+      decoding="async"
       onError={() => setFailed(true)}
       className={cn("object-cover", className)}
     />
@@ -50,219 +58,179 @@ export function ProductImage({ src, alt, className }) {
 export function AvailabilityText({ product, className }) {
   const { config } = useStore();
   const status = productStatus(product, config.lowStockThreshold);
-  if (status === "indisponivel") {
-    return <span className={cn("text-[11px] font-semibold uppercase tracking-wider text-signal", className)}>Indisponível</span>;
-  }
-  if (status === "baixo") {
-    return <span className={cn("text-[11px] font-semibold uppercase tracking-wider text-signal", className)}>Últimas unidades</span>;
-  }
-  return <span className={cn("text-[11px] font-semibold uppercase tracking-wider text-muted-foreground", className)}>Disponível</span>;
+  if (status === "indisponivel") return <span className={cn("text-xs font-semibold text-signal", className)}>Sob consulta</span>;
+  if (status === "baixo") return <span className={cn("text-xs font-semibold text-signal", className)}>Últimas unidades</span>;
+  return <span className={cn("text-xs font-medium text-muted-foreground", className)}>Disponível na loja</span>;
 }
 
 export function ProductCard({ product }) {
+  const { favorites, toggleFavorite } = useStore();
   const sizes = [...new Set(product.variations.map((v) => v.size))];
+  const favorite = favorites.includes(product.id);
   return (
-    <Link
-      to={`/produto/${product.id}`}
-      className="group block border border-foreground bg-card shadow-hard-sm transition-transform duration-200 hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-    >
-      <div className="aspect-[3/4] overflow-hidden bg-secondary">
-        <ProductImage
-          src={product.photos[0]}
-          alt={product.name}
-          className="h-full w-full transition-transform duration-300 group-hover:scale-[1.03]"
-        />
+    <article className="group relative min-w-0">
+      <Link to={`/produto/${product.id}`} className="block rounded-[var(--radius-card)] focus-visible:outline-none">
+        <div className="aspect-[3/4] overflow-hidden rounded-[var(--radius-card)] bg-secondary">
+          <ProductImage src={product.photos[0]} alt={product.name} className="h-full w-full transition-transform duration-500 group-hover:scale-[1.025]" />
+        </div>
+      </Link>
+      <button
+        type="button"
+        onClick={() => toggleFavorite(product.id)}
+        aria-label={favorite ? `Remover ${product.name} dos favoritos` : `Adicionar ${product.name} aos favoritos`}
+        aria-pressed={favorite}
+        className={cn(
+          "absolute right-3 top-3 grid h-11 w-11 place-items-center rounded-full border border-white/80 bg-white/90 text-foreground shadow-card backdrop-blur transition-transform hover:scale-105",
+          favorite && "bg-foreground text-white"
+        )}
+      >
+        <Heart className={cn("h-4 w-4", favorite && "fill-current")} />
+      </button>
+      <div className="px-1 pb-2 pt-4">
+        <div className="flex items-start justify-between gap-2">
+          <div className="min-w-0">
+            <p className="text-xs font-semibold uppercase tracking-[0.12em] text-signal">{product.brand}</p>
+            <Link to={`/produto/${product.id}`} className="mt-1 block font-display text-base leading-snug hover:text-signal md:text-lg">
+              {product.name}
+            </Link>
+          </div>
+          <p className="shrink-0 text-sm font-semibold">{formatBRL(product.price)}</p>
+        </div>
+        <p className="mt-2 truncate text-xs text-muted-foreground">{sizes.join(" · ")}</p>
+        <AvailabilityText product={product} className="mt-1 block" />
       </div>
-      <div className="space-y-1.5 border-t border-foreground p-3">
-        <h3 className="font-display text-base leading-snug">{product.name}</h3>
-        <p className="text-sm font-semibold">{formatBRL(product.price)}</p>
-        <p className="text-xs text-muted-foreground">Tamanhos: {sizes.join(", ")}</p>
-        <AvailabilityText product={product} />
-      </div>
-    </Link>
+    </article>
   );
 }
 
-function SearchBox({ onDone, autoFocus }) {
+function SearchBox({ onDone, autoFocus = false, className }) {
   const [q, setQ] = useState("");
   const navigate = useNavigate();
-  const submit = (e) => {
-    e.preventDefault();
+  const submit = (event) => {
+    event.preventDefault();
     navigate(q.trim() ? `/catalogo?busca=${encodeURIComponent(q.trim())}` : "/catalogo");
-    if (onDone) onDone();
+    onDone?.();
   };
   return (
-    <form onSubmit={submit} role="search" className="flex w-full items-center border border-foreground bg-card">
+    <form onSubmit={submit} role="search" className={cn("flex h-12 w-full items-center rounded-xl border border-input bg-card", className)}>
+      <Search className="ml-3 h-4 w-4 shrink-0 text-muted-foreground" />
       <input
         type="search"
         value={q}
         autoFocus={autoFocus}
-        onChange={(e) => setQ(e.target.value)}
-        placeholder="Buscar peça, código..."
+        onChange={(event) => setQ(event.target.value)}
+        placeholder="Buscar peças"
         aria-label="Buscar produtos"
-        className="h-10 w-full bg-transparent px-3 text-sm outline-none placeholder:text-muted-foreground"
+        className="h-full min-w-0 flex-1 bg-transparent px-3 text-sm outline-none placeholder:text-muted-foreground"
       />
-      <button type="submit" aria-label="Buscar" className="flex h-10 w-11 shrink-0 items-center justify-center border-l border-foreground bg-foreground text-background transition-colors hover:bg-signal">
+      <button type="submit" aria-label="Buscar" className="mr-1 grid h-10 w-10 place-items-center rounded-lg bg-foreground text-background hover:bg-signal">
         <Search className="h-4 w-4" />
       </button>
     </form>
   );
 }
 
+const navLinks = [
+  ["Novidades", "/catalogo"],
+  ["Jeans", "/catalogo?categoria=Cal%C3%A7as"],
+  ["Vestidos", "/catalogo?categoria=Vestidos"],
+  ["Marcas", "/#marcas"],
+  ["Visite a loja", "/#loja"],
+];
+
 export function Header() {
-  const { config } = useStore();
-  const [open, setOpen] = useState(false);
-  const [showSearch, setShowSearch] = useState(false);
+  const { config, favorites } = useStore();
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [searchOpen, setSearchOpen] = useState(false);
   const wa = config.whatsapp ? `https://wa.me/${config.whatsapp.replace(/\D/g, "")}` : null;
 
   return (
-    <header className="sticky top-7 z-40 border-b border-foreground bg-background">
-      <div className="mx-auto flex h-14 max-w-6xl items-center gap-2 px-4">
-        <button
-          className="flex h-10 w-10 items-center justify-center border border-foreground md:hidden"
-          onClick={() => setOpen(true)}
-          aria-label="Abrir menu"
-        >
-          <Menu className="h-5 w-5" />
-        </button>
-        <Link to="/" className="font-display text-xl font-bold tracking-tight">
-          {config.storeName}
-        </Link>
-        <nav className="ml-6 hidden items-center gap-5 text-sm md:flex" aria-label="Navegação principal">
-          <Link to="/catalogo" className="hover:text-signal hover:underline underline-offset-4">Catálogo</Link>
-          <Link to="/catalogo?categoria=Calças" className="hover:text-signal hover:underline underline-offset-4">Calças</Link>
-          <Link to="/catalogo?categoria=Blusas" className="hover:text-signal hover:underline underline-offset-4">Blusas</Link>
-          <Link to="/#atendimento" className="hover:text-signal hover:underline underline-offset-4">Atendimento</Link>
+    <header className="sticky top-8 z-40 border-b border-border bg-background/95 backdrop-blur-md">
+      <div className="page-shell flex h-[76px] items-center gap-3">
+        <div className="md:hidden">
+          <Sheet open={menuOpen} onOpenChange={setMenuOpen}>
+            <SheetTrigger asChild>
+              <button aria-label="Abrir menu" className="grid h-11 w-11 place-items-center rounded-xl border border-border bg-card">
+                <Menu className="h-5 w-5" />
+              </button>
+            </SheetTrigger>
+            <SheetContent side="left" className="w-[86vw] max-w-sm border-border p-0">
+              <SheetHeader className="border-b border-border p-5 text-left">
+                <SheetTitle><Logo /></SheetTitle>
+                <SheetDescription>Moda multimarcas com atendimento em Botucatu.</SheetDescription>
+              </SheetHeader>
+              <nav className="flex flex-col p-3" aria-label="Menu móvel">
+                {[['Início', '/'], ...navLinks, ['Favoritos', '/catalogo?favoritos=1']].map(([label, to]) => (
+                  <Link key={`${label}-${to}`} to={to} onClick={() => setMenuOpen(false)} className="rounded-xl px-3 py-3.5 text-base font-medium hover:bg-secondary">
+                    {label}
+                  </Link>
+                ))}
+              </nav>
+              <div className="mt-auto border-t border-border p-4">
+                {wa && <a className="button-dark w-full" href={wa} target="_blank" rel="noreferrer"><MessageCircle className="h-4 w-4" /> Falar com a loja</a>}
+              </div>
+            </SheetContent>
+          </Sheet>
+        </div>
+
+        <Link to="/" aria-label="RS Modas — início" className="shrink-0"><Logo compact /></Link>
+        <nav className="ml-5 hidden items-center gap-5 text-sm lg:flex" aria-label="Navegação principal">
+          {navLinks.map(([label, to]) => <Link key={label} to={to} className="font-medium hover:text-signal">{label}</Link>)}
         </nav>
+
         <div className="ml-auto flex items-center gap-2">
-          <div className="hidden w-56 lg:block">
-            <SearchBox />
-          </div>
-          <button
-            className="flex h-10 w-10 items-center justify-center border border-foreground lg:hidden"
-            onClick={() => setShowSearch((s) => !s)}
-            aria-label="Buscar"
-            aria-expanded={showSearch}
-          >
+          <SearchBox className="hidden w-56 xl:flex" />
+          <button onClick={() => setSearchOpen((value) => !value)} aria-label="Buscar" aria-expanded={searchOpen} className="grid h-11 w-11 place-items-center rounded-xl border border-border bg-card xl:hidden">
             <Search className="h-4 w-4" />
           </button>
-          {wa ? (
-            <a
-              href={wa}
-              target="_blank"
-              rel="noreferrer"
-              className="flex h-10 items-center gap-2 border border-foreground bg-foreground px-3 text-sm font-medium text-background transition-colors hover:bg-signal"
-            >
-              <MessageCircle className="h-4 w-4" />
-              <span className="hidden sm:inline">WhatsApp</span>
-            </a>
-          ) : (
-            <span className="hidden items-center gap-2 border border-dashed border-muted-foreground px-3 text-xs text-muted-foreground sm:flex sm:h-10">
-              WhatsApp a configurar
-            </span>
-          )}
+          <Link to="/catalogo?favoritos=1" aria-label={`${favorites.length} favoritos`} className="relative grid h-11 w-11 place-items-center rounded-xl border border-border bg-card hover:border-foreground">
+            <Heart className={cn("h-4 w-4", favorites.length > 0 && "fill-current")} />
+            {favorites.length > 0 && <span className="absolute -right-1.5 -top-1.5 grid h-5 min-w-5 place-items-center rounded-full bg-signal px-1 text-[10px] font-bold text-white">{favorites.length}</span>}
+          </Link>
+          {wa && <a href={wa} target="_blank" rel="noreferrer" className="hidden h-11 items-center gap-2 rounded-xl bg-foreground px-4 text-sm font-semibold text-background hover:bg-signal sm:inline-flex"><MessageCircle className="h-4 w-4" /> WhatsApp</a>}
         </div>
       </div>
-      {showSearch && (
-        <div className="border-t border-foreground px-4 py-2 lg:hidden">
-          <SearchBox autoFocus onDone={() => setShowSearch(false)} />
-        </div>
-      )}
-      {open && (
-        <div className="fixed inset-0 z-50 md:hidden" role="dialog" aria-modal="true" aria-label="Menu">
-          <div className="absolute inset-0 bg-foreground/40" onClick={() => setOpen(false)} />
-          <div className="absolute left-0 top-0 flex h-full w-72 flex-col border-r border-foreground bg-background">
-            <div className="flex h-14 items-center justify-between border-b border-foreground px-4">
-              <span className="font-display text-lg font-bold">{config.storeName}</span>
-              <button onClick={() => setOpen(false)} aria-label="Fechar menu" className="flex h-10 w-10 items-center justify-center border border-foreground">
-                <X className="h-5 w-5" />
-              </button>
-            </div>
-            <nav className="flex flex-col p-4 text-base" aria-label="Menu móvel">
-              {[
-                ["Início", "/"],
-                ["Catálogo completo", "/catalogo"],
-                ["Calças", "/catalogo?categoria=Calças"],
-                ["Blusas", "/catalogo?categoria=Blusas"],
-                ["Vestidos", "/catalogo?categoria=Vestidos"],
-                ["Atendimento e entrega", "/#atendimento"],
-              ].map(([label, to]) => (
-                <Link
-                  key={to}
-                  to={to}
-                  onClick={() => setOpen(false)}
-                  className="border-b border-border py-3.5 hover:text-signal"
-                >
-                  {label}
-                </Link>
-              ))}
-            </nav>
-          </div>
-        </div>
-      )}
+      {searchOpen && <div className="page-shell border-t border-border py-3 xl:hidden"><SearchBox autoFocus onDone={() => setSearchOpen(false)} /></div>}
     </header>
   );
 }
 
 export function Footer() {
-  const { config } = useStore();
+  const { config, brands } = useStore();
   const wa = config.whatsapp ? `https://wa.me/${config.whatsapp.replace(/\D/g, "")}` : null;
+  const map = mapsLink(config.address);
   return (
-    <footer className="border-t border-foreground bg-secondary">
-      <div className="mx-auto grid max-w-6xl gap-8 px-4 py-10 sm:grid-cols-2 lg:grid-cols-4">
+    <footer className="mt-8 bg-foreground text-background">
+      <div className="page-shell grid gap-10 py-12 sm:grid-cols-2 lg:grid-cols-[1.4fr_1fr_1fr_1.2fr] lg:py-16">
         <div>
-          <p className="font-display text-lg font-bold">{config.storeName}</p>
-          <p className="mt-2 text-sm text-muted-foreground">
-            Revendedora autorizada Pit Bull Jeans em Botucatu/SP.
-          </p>
+          <Logo />
+          <p className="mt-4 max-w-xs text-sm leading-relaxed text-background/65">Curadoria multimarcas e atendimento próximo para você escolher com calma.</p>
         </div>
         <div>
-          <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Contato</p>
-          <ul className="mt-3 space-y-2 text-sm">
-            <li>
-              {wa ? (
-                <a href={wa} target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 hover:text-signal hover:underline underline-offset-4">
-                  <MessageCircle className="h-4 w-4" /> WhatsApp da loja
-                </a>
-              ) : (
-                <span className="text-muted-foreground">WhatsApp a configurar</span>
-              )}
-            </li>
-            <li>
-              {config.instagram ? (
-                <a href={config.instagram} target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 hover:text-signal hover:underline underline-offset-4">
-                  <Instagram className="h-4 w-4" /> Instagram
-                </a>
-              ) : (
-                <span className="text-muted-foreground">Instagram a configurar</span>
-              )}
-            </li>
+          <p className="text-xs font-semibold uppercase tracking-[0.16em] text-gold">Explore</p>
+          <ul className="mt-4 space-y-2.5 text-sm text-background/75">
+            <li><Link to="/catalogo" className="hover:text-white">Catálogo completo</Link></li>
+            <li><Link to="/catalogo?favoritos=1" className="hover:text-white">Meus favoritos</Link></li>
+            <li><Link to="/painel" className="hover:text-white">Painel de demonstração</Link></li>
           </ul>
         </div>
         <div>
-          <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Loja</p>
-          <ul className="mt-3 space-y-2 text-sm">
-            <li className="flex items-start gap-2">
-              <MapPin className="mt-0.5 h-4 w-4 shrink-0" />
-              <span>{config.address || "Endereço a configurar"}</span>
-            </li>
-            <li className="flex items-start gap-2">
-              <Clock className="mt-0.5 h-4 w-4 shrink-0" />
-              <span>{config.hours || "Horários a configurar"}</span>
-            </li>
-          </ul>
+          <p className="text-xs font-semibold uppercase tracking-[0.16em] text-gold">Marcas</p>
+          <ul className="mt-4 space-y-2.5 text-sm text-background/75">{brands.slice(0, 5).map((brand) => <li key={brand}><Link to={`/catalogo?marca=${encodeURIComponent(brand)}`} className="hover:text-white">{brand}</Link></li>)}</ul>
         </div>
         <div>
-          <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Atendimento</p>
-          <p className="mt-3 text-sm text-muted-foreground">{config.serviceInfo}</p>
+          <p className="text-xs font-semibold uppercase tracking-[0.16em] text-gold">Fale e visite</p>
+          <ul className="mt-4 space-y-3 text-sm text-background/75">
+            {wa && <li><a href={wa} target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 hover:text-white"><MessageCircle className="h-4 w-4" /> WhatsApp da loja</a></li>}
+            {config.instagram && <li><a href={config.instagram} target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 hover:text-white"><Instagram className="h-4 w-4" /> @rsmodas.25</a></li>}
+            {map && <li><a href={map} target="_blank" rel="noreferrer" className="inline-flex items-start gap-2 hover:text-white"><MapPin className="mt-0.5 h-4 w-4 shrink-0" /> {config.address}</a></li>}
+          </ul>
         </div>
       </div>
-      <div className="border-t border-foreground/20">
-        <div className="mx-auto flex max-w-6xl flex-col gap-2 px-4 py-4 text-xs text-muted-foreground sm:flex-row sm:items-center sm:justify-between">
-          <p>© {new Date().getFullYear()} {config.storeName} — demonstração. {config.demoNotice}</p>
-          <Link to="/painel" className="font-medium hover:text-signal hover:underline underline-offset-4">
-            Painel de demonstração
-          </Link>
+      <div className="border-t border-white/10">
+        <div className="page-shell flex flex-col gap-2 py-5 text-xs text-background/50 sm:flex-row sm:items-center sm:justify-between">
+          <p>© {new Date().getFullYear()} {config.storeName}. Vitrine de demonstração.</p>
+          <p className="inline-flex items-center gap-1.5"><Sparkles className="h-3 w-3 text-gold" /> Seu estilo, suas escolhas.</p>
         </div>
       </div>
     </footer>
@@ -271,8 +239,9 @@ export function Footer() {
 
 export function EmptyState({ title, children, action }) {
   return (
-    <div className="flex flex-col items-center gap-3 border border-dashed border-muted-foreground/60 bg-card px-6 py-12 text-center">
-      <p className="font-display text-lg">{title}</p>
+    <div className="flex flex-col items-center gap-3 rounded-[var(--radius-editorial)] border border-dashed border-border bg-card px-6 py-14 text-center">
+      <Heart className="h-6 w-6 text-signal" strokeWidth={1.5} />
+      <p className="font-display text-xl">{title}</p>
       {children && <div className="max-w-md text-sm text-muted-foreground">{children}</div>}
       {action}
     </div>

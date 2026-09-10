@@ -2,6 +2,8 @@ import React, { createContext, useContext, useEffect, useState } from "react";
 
 const STORAGE_KEY = "rsmodas-demo-v1";
 
+export const DEFAULT_BRANDS = ["Pit Bull Jeans", "Rhero", "Maria Dondoca"];
+
 export const INQUIRY_STATUSES = [
   { id: "nova", label: "Nova solicitação" },
   { id: "fornecedor", label: "Consultar fornecedor" },
@@ -19,19 +21,31 @@ export const MOVEMENT_TYPES = {
 };
 
 const IMG = {
-  p1: "https://images.hostinger.com/f68f3e2d-8c7f-4ffa-8fb9-58a1cdefc59b.png",
+  p1: "/catalog/rhero-calca.png",
   p2: "https://images.hostinger.com/38fa0bca-8fc9-4876-b3fc-1ed18a7d35f9.png",
-  p3: "https://images.hostinger.com/bd64f19c-3072-4f78-a0a3-87875f209c10.png",
+  p3: "/catalog/jaqueta.png",
   p4: "https://images.hostinger.com/f40ea86f-52e1-4d01-acfc-83e66736d23a.png",
   p5: "https://images.hostinger.com/45a7bf61-450b-4b6a-8dd3-5e5509181384.png",
   p6: "https://images.hostinger.com/0bc4265f-e05e-4bb2-9c1a-92cb5f2f22e5.png",
-  p7: "https://images.hostinger.com/cf494e3a-199f-4de0-aa21-514336c4a1a8.png",
-  p8: "https://images.hostinger.com/8942090e-5125-4918-96a4-b03bce78ea85.png",
-  p9: "https://images.hostinger.com/9145d79e-1d15-45fa-95bd-a552c0180106.png",
+  p7: "/catalog/saia.png",
+  p8: "/catalog/shorts.png",
+  p9: "/catalog/trico.png",
   p10: "https://images.hostinger.com/8e4a895c-3b32-486c-b7a9-5656b6c1769a.png",
-  p11: "https://images.hostinger.com/60077467-d902-4863-8d8b-587d58266988.png",
+  p11: "/catalog/body.png",
   p12: "https://images.hostinger.com/33dd4bc3-60f6-407b-b923-eddef55d1c88.png",
-  hero: "https://images.hostinger.com/ba5d12be-b17f-4ca5-bdb9-7e55bc0c2bd2.png",
+  hero: "/catalog/hero.png",
+  pit1: [
+    "/catalog/pit-81707-1.webp",
+    "/catalog/pit-81707-2.webp",
+    "/catalog/pit-81707-3.webp",
+  ],
+  pit2: [
+    "/catalog/pit-83672-1.webp",
+    "/catalog/pit-83672-2.webp",
+  ],
+  maria1: "/catalog/maria-ipanema.webp",
+  maria2: "/catalog/maria-alessia.webp",
+  rhero11989: ["/catalog/rhero-11989-1.webp", "/catalog/rhero-11989-2.webp"],
 };
 
 export const HERO_IMAGE = IMG.hero;
@@ -43,14 +57,14 @@ export const DEFAULT_CONFIG = {
   storeName: "RS Modas",
   whatsapp: "5514998184411",
   instagram: "https://instagram.com/rsmodas.25/",
-  address: "",
+  address: "Avenida Petrarca Bachi, 520 — Botucatu/SP",
   hours: "",
   serviceInfo:
     "Atendimento local em Botucatu/SP, com possibilidade de entrega na cidade. Condições, prazos e horários são confirmados diretamente com a loja pelo WhatsApp.",
   demoNotice:
     "Vitrine de demonstração — produtos, imagens, preços e estoques são ilustrativos.",
   lowStockThreshold: 3,
-  accentColor: "#c22f1e",
+  accentColor: "#796022",
 };
 
 function mkVariations(sizes, colors, stock) {
@@ -67,28 +81,29 @@ function mkVariations(sizes, colors, stock) {
 function seedProducts() {
   const base = Date.now();
   const defs = [
-    { code: "RS-001", name: "Calça Jeans Skinny Lavagem Escura", category: "Calças", price: 189.9, photo: IMG.p1, sizes: ["36", "38", "40", "42", "44"], colors: ["Azul escuro", "Preto"], stock: (i, j) => (i + j) % 4 === 0 ? 0 : 5 - ((i + j) % 3), description: "Calça jeans de modelagem skinny e cós médio, em lavagem escura. Peça versátil para compor looks do dia a dia." },
-    { code: "RS-002", name: "Calça Jeans Wide Leg Clara", category: "Calças", price: 219.9, photo: IMG.p2, sizes: ["36", "38", "40", "42"], colors: ["Azul claro"], stock: (i) => (i === 2 ? 0 : 4), description: "Calça jeans de modelagem wide leg, com caimento amplo e lavagem clara. Confortável e atual." },
-    { code: "RS-003", name: "Jaqueta Jeans Trucker", category: "Jaquetas", price: 259.9, photo: IMG.p3, sizes: ["P", "M", "G", "GG"], colors: ["Azul médio"], stock: (i) => (i === 0 ? 2 : 5), description: "Jaqueta jeans de modelagem trucker, com botões frontais e bolsos. Clássica para meia-estação." },
-    { code: "RS-004", name: "Vestido Midi Preto", category: "Vestidos", price: 179.9, photo: IMG.p4, sizes: ["P", "M", "G"], colors: ["Preto"], stock: () => 6, description: "Vestido midi de caimento fluido. Peça única que funciona em ocasiões casuais e arrumadas." },
-    { code: "RS-005", name: "Camiseta Básica Branca", category: "Camisetas", price: 59.9, photo: IMG.p5, sizes: ["P", "M", "G", "GG"], colors: ["Branco", "Preto"], stock: (i, j) => (j === 0 ? 2 : 1), description: "Camiseta básica de gola redonda. Essencial para o guarda-roupa." },
-    { code: "RS-006", name: "Camisa Azul Clara", category: "Camisas", price: 149.9, photo: IMG.p6, sizes: ["P", "M", "G"], colors: ["Azul claro"], stock: () => 4, description: "Camisa de botões em tom azul claro, de tecido leve. Serve para trabalho e fins de semana." },
-    { code: "RS-007", name: "Saia Jeans Evasê", category: "Saias", price: 129.9, photo: IMG.p7, sizes: ["36", "38", "40", "42"], colors: ["Azul escuro"], stock: (i) => (i === 3 ? 0 : 3), description: "Saia jeans de modelagem evasê, com fechamento frontal. Feminina e fácil de combinar." },
-    { code: "RS-008", name: "Shorts Jeans Cintura Alta", category: "Shorts", price: 119.9, photo: IMG.p8, sizes: ["36", "38", "40", "42"], colors: ["Azul médio"], stock: (i) => (i < 2 ? 0 : 4), description: "Shorts jeans de cintura alta e lavagem média. Básico para os dias quentes." },
-    { code: "RS-009", name: "Blusa de Tricô Bege", category: "Blusas", price: 139.9, photo: IMG.p9, sizes: ["P", "M", "G"], colors: ["Bege"], stock: () => 5, description: "Blusa de tricô em tom bege, toque macio. Ideal para dias mais frescos." },
-    { code: "RS-010", name: "Calça Jogger Preta", category: "Calças", price: 159.9, photo: IMG.p10, sizes: ["P", "M", "G", "GG"], colors: ["Preto"], stock: () => 7, description: "Calça jogger com punhos em elástico e cós ajustável. Conforto para o dia inteiro." },
-    { code: "RS-011", name: "Body Canelado Vinho", category: "Blusas", price: 99.9, photo: IMG.p11, sizes: ["P", "M", "G"], colors: ["Vinho"], stock: (i) => (i === 1 ? 2 : 4), description: "Body canelado em tom vinho, modelagem justa. Combina com jeans e saias." },
-    { code: "RS-012", name: "Cropped Branco Reto", category: "Blusas", price: 79.9, photo: IMG.p12, sizes: ["P", "M", "G"], colors: ["Branco"], stock: () => 0, description: "Cropped de decote reto em branco. Leve e versátil para sobreposições." },
+    { code: "81707", name: "Calça Jeans Cintura Perfeita", category: "Calças", brand: "Pit Bull Jeans", price: 209.99, photos: IMG.pit1, sizes: ["34", "36", "38", "40", "42", "44", "46"], colors: ["Azul médio"], stock: (i) => (i === 0 ? 0 : 4), sourceUrl: "https://www.pitbulljeans.com.br/calca-jeans-feminina-cintura-perfeita-81707-p9625", description: "Jeans de cintura alta e modelagem ajustada, com caimento confortável e acabamento marcante para produções do dia a dia." },
+    { code: "83672", name: "Calça Skinny Modeladora Confort", category: "Calças", brand: "Pit Bull Jeans", price: 99.99, photos: IMG.pit2, sizes: ["36", "38", "40", "42", "44", "46"], colors: ["Azul escuro"], stock: (i) => (i === 4 ? 0 : 3), sourceUrl: "https://www.pitbulljeans.com.br/calca-feminina-skinny-modeladora-83672-p6108", description: "Calça skinny em jeans flexível, com cintura alta e lavagem escura. Uma base versátil para diferentes combinações." },
+    { code: "57588", name: "Calça Jeans com Pedrarias", category: "Calças", brand: "Rhero", price: 249.9, photo: IMG.p1, sizes: ["36", "38", "40", "42", "44", "46", "48"], colors: ["Azul claro"], stock: (i) => (i === 2 ? 1 : 0), sourceUrl: "https://rhero.com.br/produtos/57588-calca-jeans-modeladora-com-pedrarias-1m5qu/", description: "Jeans claro com cós anatômico e detalhes de pedraria. Uma peça de presença, equilibrada por uma modelagem confortável." },
+    { code: "11989", name: "Cropped Gola Alta com Zíper", category: "Blusas", brand: "Rhero", price: 199.9, photos: IMG.rhero11989, sizes: ["P", "M", "G"], colors: ["Branco", "Bege"], stock: (i, j) => (i + j === 3 ? 0 : 3), sourceUrl: "https://rhero.com.br/produtos/11989-cropped-gola-alta-com-ziper-frontal-e-detalhe-exclusivo-79fbr/", description: "Cropped de gola alta com recorte geométrico e zíper frontal. Funciona com jeans, saias e sobreposições leves." },
+    { code: "MD-IPANEMA", name: "Vestido Ipanema", category: "Vestidos", brand: "Maria Dondoca", price: 319.8, photo: IMG.maria1, sizes: ["P", "M", "G"], colors: ["Azul/Off-white", "Preto/Marrom", "Preto/Bege"], stock: (i, j) => (i + j) % 4 === 0 ? 0 : 3, sourceUrl: "https://www.mariadondoca.com.br/produtos/vestido-ipanema-1ixox/", description: "Vestido longo com alças finas, decote delicado e blocos de cor. Leve para dias quentes e ocasiões especiais." },
+    { code: "MD-ALESSIA", name: "Conjunto Alessia", category: "Conjuntos", brand: "Maria Dondoca", price: 379.8, photo: IMG.maria2, sizes: ["P", "M", "G"], colors: ["Preto/Verde", "Preto/Bege"], stock: () => 3, sourceUrl: "https://www.mariadondoca.com.br/produtos/conjunto-alessia-1t2vd/", description: "Top cropped canelado e calça reta com listras laterais, em uma composição urbana que une conforto e acabamento elegante." },
+    { code: "RS-007", name: "Jaqueta Jeans Trucker", category: "Jaquetas", brand: "Pit Bull Jeans", price: 259.9, photo: IMG.p3, sizes: ["P", "M", "G", "GG"], colors: ["Azul médio"], stock: (i) => (i === 0 ? 2 : 5), description: "Jaqueta jeans estruturada com botões frontais e bolsos. Uma terceira peça prática para meia-estação." },
+    { code: "RS-008", name: "Shorts Jeans Cintura Alta", category: "Shorts", brand: "Rhero", price: 189.9, photo: IMG.p8, sizes: ["36", "38", "40", "42"], colors: ["Azul médio"], stock: (i) => (i < 2 ? 0 : 4), description: "Shorts jeans de cintura alta e lavagem média, pensado para produções frescas e descomplicadas." },
+    { code: "RS-009", name: "Saia Jeans Evasê", category: "Saias", brand: "Pit Bull Jeans", price: 179.9, photo: IMG.p7, sizes: ["36", "38", "40", "42"], colors: ["Azul escuro"], stock: (i) => (i === 3 ? 0 : 3), description: "Saia jeans evasê com fechamento frontal e caimento leve, fácil de combinar com básicos e peças marcantes." },
+    { code: "RS-010", name: "Camisa Essencial Azul", category: "Camisas", brand: "Maria Dondoca", price: 219.8, photo: IMG.p6, sizes: ["P", "M", "G"], colors: ["Azul claro"], stock: () => 4, description: "Camisa leve em azul claro, com corte limpo para acompanhar dias de trabalho e fins de semana." },
+    { code: "RS-011", name: "Body Canelado Vinho", category: "Blusas", brand: "Rhero", price: 149.9, photo: IMG.p11, sizes: ["P", "M", "G"], colors: ["Vinho"], stock: (i) => (i === 1 ? 2 : 4), description: "Body canelado em tom vinho, de caimento ajustado e toque macio para usar com jeans e saias." },
+    { code: "RS-012", name: "Blusa de Tricô Natural", category: "Blusas", brand: "Maria Dondoca", price: 219.8, photo: IMG.p9, sizes: ["P", "M", "G"], colors: ["Bege"], stock: () => 0, description: "Tricô macio em tom natural, com textura delicada para looks confortáveis em dias mais frescos." },
   ];
   return defs.map((d, idx) => ({
     id: uid(),
     code: d.code,
     name: d.name,
     category: d.category,
-    brand: "RS Modas",
+    brand: d.brand,
     price: d.price,
     description: d.description,
-    photos: [d.photo],
+    photos: d.photos || [d.photo],
+    sourceUrl: d.sourceUrl || "",
     variations: mkVariations(d.sizes, d.colors, d.stock),
     archived: false,
     createdAt: base - (defs.length - idx) * 60000,
@@ -115,7 +130,24 @@ function seedState() {
       }
     });
   });
-  return { products, movements, inquiries: [], config: { ...DEFAULT_CONFIG } };
+  return { products, movements, inquiries: [], favorites: [], brands: [...DEFAULT_BRANDS], config: { ...DEFAULT_CONFIG } };
+}
+
+function migrateState(parsed) {
+  const productBrands = Array.isArray(parsed.products) ? parsed.products.map((p) => p.brand).filter(Boolean) : [];
+  const brands = [...new Set([...(parsed.brands || []), ...DEFAULT_BRANDS, ...productBrands])].sort((a, b) => a.localeCompare(b, "pt-BR"));
+  const config = { ...DEFAULT_CONFIG, ...(parsed.config || {}) };
+  if (!config.address) config.address = DEFAULT_CONFIG.address;
+  if (config.accentColor === "#c22f1e") config.accentColor = DEFAULT_CONFIG.accentColor;
+  return {
+    ...parsed,
+    products: Array.isArray(parsed.products) ? parsed.products : [],
+    movements: Array.isArray(parsed.movements) ? parsed.movements : [],
+    inquiries: Array.isArray(parsed.inquiries) ? parsed.inquiries : [],
+    favorites: Array.isArray(parsed.favorites) ? parsed.favorites : [],
+    brands,
+    config,
+  };
 }
 
 export function formatBRL(value) {
@@ -196,7 +228,7 @@ export function StoreProvider({ children }) {
       const raw = localStorage.getItem(STORAGE_KEY);
       if (raw) {
         const parsed = JSON.parse(raw);
-        if (parsed && Array.isArray(parsed.products) && parsed.config) return parsed;
+        if (parsed && Array.isArray(parsed.products) && parsed.config) return migrateState(parsed);
       }
     } catch (_) {
       /* ignora e recria */
@@ -249,13 +281,34 @@ export function StoreProvider({ children }) {
         const products = prev.products.map((p) =>
           p.id === draft.id ? { ...existing, ...draft, id: existing.id, variations } : p
         );
-        return { ...prev, products, movements };
+        const brands = draft.brand && !prev.brands.includes(draft.brand) ? [...prev.brands, draft.brand].sort((a, b) => a.localeCompare(b, "pt-BR")) : prev.brands;
+        return { ...prev, products, movements, brands };
       }
       const id = draft.id || uid();
       const variations = cleanVariations(draft.variations, null, id, draft.name);
       const product = { ...draft, id, variations, archived: false, createdAt: Date.now() };
-      return { ...prev, products: [product, ...prev.products], movements };
-    });
+        const brands = draft.brand && !prev.brands.includes(draft.brand) ? [...prev.brands, draft.brand].sort((a, b) => a.localeCompare(b, "pt-BR")) : prev.brands;
+        return { ...prev, products: [product, ...prev.products], movements, brands };
+      });
+  };
+
+  const addBrand = (name) => {
+    const clean = (name || "").trim();
+    if (!clean) return { ok: false, error: "Informe o nome da marca." };
+    if (state.brands.some((brand) => brand.toLocaleLowerCase("pt-BR") === clean.toLocaleLowerCase("pt-BR"))) {
+      return { ok: false, error: "Esta marca já está cadastrada." };
+    }
+    setState((prev) => ({ ...prev, brands: [...prev.brands, clean].sort((a, b) => a.localeCompare(b, "pt-BR")) }));
+    return { ok: true };
+  };
+
+  const toggleFavorite = (productId) => {
+    setState((prev) => ({
+      ...prev,
+      favorites: prev.favorites.includes(productId)
+        ? prev.favorites.filter((id) => id !== productId)
+        : [...prev.favorites, productId],
+    }));
   };
 
   const archiveProduct = (id, archived = true) => {
@@ -362,6 +415,8 @@ export function StoreProvider({ children }) {
     setInquiryStatus,
     updateConfig,
     resetDemo,
+    addBrand,
+    toggleFavorite,
   };
 
   return <StoreContext.Provider value={value}>{children}</StoreContext.Provider>;

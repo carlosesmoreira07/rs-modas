@@ -6,46 +6,81 @@
 
 @layer base {
   :root {
-    --background: 36 33% 97%;
-    --foreground: 20 10% 8%;
+    --background: 38 37% 97%;
+    --foreground: 0 0% 9%;
     --card: 0 0% 100%;
-    --card-foreground: 20 10% 8%;
+    --card-foreground: 0 0% 9%;
     --popover: 0 0% 100%;
-    --popover-foreground: 20 10% 8%;
-    --primary: 20 10% 8%;
-    --primary-foreground: 36 33% 97%;
-    --secondary: 36 18% 92%;
-    --secondary-foreground: 20 10% 8%;
-    --muted: 36 14% 90%;
-    --muted-foreground: 24 6% 38%;
-    --accent: 36 18% 92%;
-    --accent-foreground: 20 10% 8%;
-    --destructive: 8 72% 42%;
-    --destructive-foreground: 36 33% 97%;
-    --border: 24 10% 82%;
-    --input: 24 10% 82%;
-    --ring: 8 72% 42%;
-    --signal: 8 72% 42%;
-    --radius: 0.125rem;
+    --popover-foreground: 0 0% 9%;
+    --primary: 0 0% 9%;
+    --primary-foreground: 38 37% 97%;
+    --secondary: 38 28% 93%;
+    --secondary-foreground: 0 0% 9%;
+    --muted: 38 24% 92%;
+    --muted-foreground: 28 7% 36%;
+    --accent: 42 38% 53%;
+    --accent-foreground: 0 0% 9%;
+    --destructive: 4 63% 38%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 36 29% 87%;
+    --input: 36 29% 87%;
+    --ring: 43 54% 30%;
+    --signal: 43 54% 30%;
+    --gold: 42 38% 53%;
+    --radius: 0.75rem;
+    --radius-card: 1.125rem;
+    --radius-editorial: 1.5rem;
+    --shadow-soft: 0 18px 50px rgba(24, 24, 24, 0.08);
+    --shadow-card: 0 10px 30px rgba(24, 24, 24, 0.07);
   }
+
+  * { border-color: hsl(var(--border)); }
+  html { scroll-behavior: smooth; }
+
+  body {
+    min-width: 320px;
+    overflow-x: clip;
+    background: hsl(var(--background));
+    color: hsl(var(--foreground));
+    font-family: "Archivo", sans-serif;
+    font-size: 16px;
+    line-height: 1.5;
+    text-rendering: optimizeLegibility;
+  }
+
+  button, input, textarea, select, a { -webkit-tap-highlight-color: transparent; }
+  button, a { touch-action: manipulation; }
+  :focus-visible { outline: 3px solid hsl(var(--ring)); outline-offset: 3px; }
+  ::selection { background: hsl(var(--gold) / 0.35); }
 }
 
-body {
-  font-family: "Archivo", sans-serif;
-  overflow-x: clip;
-  background-color: hsl(var(--background));
-  color: hsl(var(--foreground));
-}
+.font-display { font-family: "Libre Caslon Text", Georgia, serif; }
 
-.font-display {
-  font-family: "Libre Caslon Text", Georgia, serif;
+@layer components {
+  .page-shell { @apply mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8; }
+  .eyebrow { @apply text-xs font-semibold uppercase tracking-[0.18em] text-signal; }
+  .control { @apply h-12 w-full rounded-xl border border-input bg-card px-4 text-sm outline-none transition-colors placeholder:text-muted-foreground focus-visible:border-signal focus-visible:ring-2 focus-visible:ring-ring/20; }
+  .button-dark { @apply inline-flex min-h-12 items-center justify-center gap-2 rounded-xl bg-foreground px-5 text-sm font-semibold text-background transition-colors hover:bg-signal; }
+  .button-light { @apply inline-flex min-h-12 items-center justify-center gap-2 rounded-xl border border-border bg-card px-5 text-sm font-semibold text-foreground transition-colors hover:border-foreground hover:bg-secondary; }
 }
 
 @layer utilities {
   .text-signal { color: hsl(var(--signal)); }
+  .text-gold { color: hsl(var(--gold)); }
   .bg-signal { background-color: hsl(var(--signal)); }
+  .bg-gold { background-color: hsl(var(--gold)); }
   .border-signal { border-color: hsl(var(--signal)); }
-  .shadow-hard { box-shadow: 6px 6px 0 0 hsl(var(--foreground)); }
-  .shadow-hard-sm { box-shadow: 3px 3px 0 0 hsl(var(--foreground)); }
-  .shadow-hard-signal { box-shadow: 6px 6px 0 0 hsl(var(--signal)); }
+  .shadow-soft { box-shadow: var(--shadow-soft); }
+  .shadow-card { box-shadow: var(--shadow-card); }
+  .text-balance { text-wrap: balance; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }
