@@ -1,4 +1,69 @@
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# Dependências
 node_modules/
 dist/
-vault/
+dist-ssr/
+build/
+out/
+.cache/
+.vite/
+.eslintcache
+
+# Variáveis de ambiente e segredos
+.env
+.env.local
+.env.*.local
+*.pem
+*.key
+
+# Testes, relatórios e artefatos de execução
+*.test.js
+*.test.jsx
+*.test.mjs
+*.test.ts
+*.test.tsx
+*.spec.js
+*.spec.jsx
+*.spec.mjs
+*.spec.ts
+*.spec.tsx
+coverage/
+.nyc_output/
+test-results/
+playwright-report/
+blob-report/
+playwright/.cache/
+
+# Scripts temporários de execução e automação local
+scratch/
+temp/
+tmp/
+*.ps1
+
+# IDEs e Editores
+.vscode/*
+!.vscode/extensions.json
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# Sistema operacional
 .DS_Store
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# Bases locais e vaults
+vault/
+pb_data/
