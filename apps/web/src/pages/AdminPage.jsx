@@ -6,10 +6,10 @@ import { useStore, formatBRL, availableOf, productAvailable, INQUIRY_STATUSES, M
 import { ProductImage } from "@/components/chrome";
 import { cn } from "@/lib/utils";
 
-const input = "h-11 w-full border border-foreground bg-card px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring";
-const btn = "inline-flex h-11 items-center justify-center gap-2 border border-foreground px-4 text-sm font-semibold transition-colors";
+const input = "control";
+const btn = "inline-flex min-h-11 items-center justify-center gap-2 rounded-xl px-4 text-sm font-semibold transition-colors";
 const btnPrimary = cn(btn, "bg-foreground text-background hover:bg-signal");
-const btnGhost = cn(btn, "bg-card hover:bg-secondary");
+const btnGhost = cn(btn, "border border-border bg-card hover:border-foreground hover:bg-secondary");
 
 function Field({ label, error, children }) {
   return (
@@ -24,11 +24,11 @@ function Field({ label, error, children }) {
 /* ---------------- Produtos ---------------- */
 
 const emptyDraft = () => ({
-  id: null, code: "", name: "", category: "", brand: "RS Modas", price: "", description: "",
+  id: null, code: "", name: "", category: "", brand: "", price: "", description: "",
   photos: [], variations: [{ id: uid(), size: "", color: "", physical: 0 }],
 });
 
-function ProductForm({ initial, onSave, onCancel, products }) {
+function ProductForm({ initial, onSave, onCancel, products, brands }) {
   const [d, setD] = useState(initial);
   const [errors, setErrors] = useState({});
   const [url, setUrl] = useState("");
@@ -68,6 +68,7 @@ function ProductForm({ initial, onSave, onCancel, products }) {
     const errs = {};
     if (!d.name.trim()) errs.name = "Informe o nome.";
     if (!d.code.trim()) errs.code = "Informe o código.";
+    if (!d.brand.trim()) errs.brand = "Selecione ou cadastre uma marca.";
     if (products.some((p) => p.code === d.code.trim() && p.id !== d.id)) errs.code = "Código já usado por outro produto.";
     const price = Number(String(d.price).replace(",", "."));
     if (!Number.isFinite(price) || price < 0) errs.price = "Preço deve ser zero ou maior.";
@@ -83,20 +84,22 @@ function ProductForm({ initial, onSave, onCancel, products }) {
     onSave({
       ...d,
       name: d.name.trim(), code: d.code.trim(), category: d.category.trim() || "Sem categoria",
-      brand: d.brand.trim() || "RS Modas", price, description: d.description.trim(),
+      brand: d.brand.trim(), price, description: d.description.trim(),
       variations: vars.map((v) => ({ ...v, physical: Math.round(Number(v.physical) || 0) })),
     });
   };
 
   return (
-    <form onSubmit={submit} className="space-y-4 border border-foreground bg-card p-4 shadow-hard-sm md:p-6">
+    <form onSubmit={submit} className="space-y-4 rounded-[var(--radius-card)] border border-border bg-card p-4 shadow-card md:p-6">
       <div className="grid gap-4 sm:grid-cols-2">
         <Field label="Código" error={errors.code}><input className={input} value={d.code} onChange={(e) => set("code", e.target.value)} placeholder="RS-013" /></Field>
         <Field label="Nome" error={errors.name}><input className={input} value={d.name} onChange={(e) => set("name", e.target.value)} /></Field>
         <Field label="Categoria"><input className={input} value={d.category} onChange={(e) => set("category", e.target.value)} list="cats" />
           <datalist id="cats">{[...new Set(products.map((p) => p.category))].map((c) => <option key={c} value={c} />)}</datalist>
         </Field>
-        <Field label="Marca"><input className={input} value={d.brand} onChange={(e) => set("brand", e.target.value)} /></Field>
+        <Field label="Marca" error={errors.brand}><input className={input} value={d.brand} onChange={(e) => set("brand", e.target.value)} list="brands" placeholder="Selecione ou digite uma nova" />
+          <datalist id="brands">{brands.map((brand) => <option key={brand} value={brand} />)}</datalist>
+        </Field>
         <Field label="Preço (R$)" error={errors.price}><input className={input} inputMode="decimal" value={d.price} onChange={(e) => set("price", e.target.value)} placeholder="199,90" /></Field>
       </div>
 
@@ -163,7 +166,7 @@ function ProductForm({ initial, onSave, onCancel, products }) {
 }
 
 function AdminProducts() {
-  const { products, saveProduct, archiveProduct } = useStore();
+  const { products, brands, saveProduct, archiveProduct } = useStore();
   const [editing, setEditing] = useState(null); // null | 'new' | product
   const [saved, setSaved] = useState(false);
 
@@ -172,6 +175,7 @@ function AdminProducts() {
       <ProductForm
         initial={editing === "new" ? emptyDraft() : JSON.parse(JSON.stringify(editing))}
         products={products}
+        brands={brands}
         onSave={(draft) => { saveProduct(draft); setEditing(null); setSaved(true); setTimeout(() => setSaved(false), 2500); }}
         onCancel={() => setEditing(null)}
       />
@@ -185,7 +189,7 @@ function AdminProducts() {
         <button onClick={() => setEditing("new")} className={cn(btnPrimary, "shrink-0")}><Plus className="h-4 w-4" /> Novo</button>
       </div>
       {saved && <p role="status" className="border border-foreground bg-secondary px-3 py-2 text-sm">Produto salvo — já visível na vitrine.</p>}
-      <ul className="divide-y divide-border border border-foreground bg-card">
+      <ul className="divide-y divide-border overflow-hidden rounded-[var(--radius-card)] border border-border bg-card shadow-card">
         {products.map((p) => (
           <li key={p.id} className={cn("flex items-center gap-3 p-3", p.archived && "opacity-50")}>
             <div className="h-14 w-14 shrink-0 border border-border bg-secondary"><ProductImage src={p.photos[0]} alt="" className="h-full w-full" /></div>
@@ -395,9 +399,11 @@ function AdminInquiries() {
 /* ---------------- Configurações ---------------- */
 
 function AdminSettings() {
-  const { config, updateConfig, resetDemo } = useStore();
+  const { config, brands, addBrand, updateConfig, resetDemo } = useStore();
   const [f, setF] = useState(config);
   const [saved, setSaved] = useState(false);
+  const [newBrand, setNewBrand] = useState("");
+  const [brandMessage, setBrandMessage] = useState("");
   const set = (k, v) => setF((p) => ({ ...p, [k]: v }));
   const save = (e) => {
     e.preventDefault();
@@ -406,7 +412,7 @@ function AdminSettings() {
     setTimeout(() => setSaved(false), 2500);
   };
   return (
-    <form onSubmit={save} className="space-y-4 border border-foreground bg-card p-4 shadow-hard-sm md:p-6">
+    <form onSubmit={save} className="space-y-5 rounded-[var(--radius-card)] border border-border bg-card p-4 shadow-card md:p-6">
       <div className="grid gap-4 sm:grid-cols-2">
         <Field label="Nome da loja"><input className={input} value={f.storeName} onChange={(e) => set("storeName", e.target.value)} /></Field>
         <Field label="WhatsApp (somente números, com DDD)"><input className={input} inputMode="numeric" value={f.whatsapp} onChange={(e) => set("whatsapp", e.target.value.replace(/\D/g, ""))} placeholder="5514999999999" /></Field>
@@ -422,6 +428,16 @@ function AdminSettings() {
       <Field label="Aviso de demonstração">
         <textarea className="min-h-16 w-full border border-foreground bg-card px-3 py-2 text-sm" value={f.demoNotice} onChange={(e) => set("demoNotice", e.target.value)} />
       </Field>
+      <div className="rounded-2xl border border-border bg-secondary p-4">
+        <p className="text-sm font-semibold">Marcas disponíveis</p>
+        <p className="mt-1 text-xs text-muted-foreground">A lista é usada no cadastro e nos filtros da vitrine. Uma marca nova também é incluída automaticamente ao salvar um produto.</p>
+        <div className="mt-3 flex flex-wrap gap-2">{brands.map((brand) => <span key={brand} className="rounded-full border border-border bg-card px-3 py-2 text-xs font-semibold">{brand}</span>)}</div>
+        <div className="mt-4 flex flex-col gap-2 sm:flex-row">
+          <input className={input} value={newBrand} onChange={(e) => setNewBrand(e.target.value)} placeholder="Nome da nova marca" />
+          <button type="button" className={cn(btnGhost, "shrink-0")} onClick={() => { const result = addBrand(newBrand); setBrandMessage(result.ok ? "Marca cadastrada." : result.error); if (result.ok) setNewBrand(""); }}>Cadastrar marca</button>
+        </div>
+        {brandMessage && <p role="status" className="mt-2 text-xs text-muted-foreground">{brandMessage}</p>}
+      </div>
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
         <button type="submit" className={btnPrimary}>Salvar configurações</button>
         <button type="button" onClick={resetDemo} className={btnGhost}>Restaurar dados de demonstração</button>
@@ -449,12 +465,13 @@ export default function AdminPage() {
         <title>Painel de demonstração — RS Modas</title>
         <meta name="description" content="Painel interno de demonstração da RS Modas: produtos, estoque, procura e configurações." />
       </Helmet>
-      <div className="mx-auto max-w-6xl px-4 py-8">
+      <div className="page-shell py-8">
         <Link to="/" className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-signal">
           <ArrowLeft className="h-4 w-4" /> Voltar à vitrine
         </Link>
-        <div className="mt-4 border border-foreground bg-foreground p-4 text-background shadow-hard-signal">
-          <h1 className="font-display text-2xl md:text-3xl">Painel de demonstração</h1>
+        <div className="mt-4 rounded-[var(--radius-editorial)] bg-foreground p-5 text-background shadow-soft md:p-7">
+          <p className="text-xs font-semibold uppercase tracking-[0.16em] text-gold">Operação local</p>
+          <h1 className="mt-2 font-display text-3xl md:text-4xl">Painel de demonstração</h1>
           <p className="mt-1 text-sm text-background/70">
             Área interna simulada, sem autenticação nesta fase. Os dados ficam apenas neste navegador (armazenamento local), podem ser perdidos e não sincronizam entre dispositivos.
           </p>
@@ -466,7 +483,7 @@ export default function AdminPage() {
               role="tab"
               aria-selected={tab === t.id}
               onClick={() => setParams({ aba: t.id })}
-              className={cn("h-11 border border-foreground px-4 text-sm font-semibold transition-colors", tab === t.id ? "bg-foreground text-background" : "bg-card hover:bg-secondary")}
+              className={cn("min-h-11 rounded-full border px-4 text-sm font-semibold transition-colors", tab === t.id ? "border-foreground bg-foreground text-background" : "border-border bg-card hover:border-foreground hover:bg-secondary")}
             >
               {t.label}
             </button>
