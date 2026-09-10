@@ -14,7 +14,7 @@ const PRICE_RANGES = [
   { id: "400-99999", label: "Acima de R$ 400" },
 ];
 
-const emptyFilters = { categoria: "all", marca: "all", tamanho: "all", cor: "all", preco: "all", disp: "all" };
+const emptyFilters = { categoria: "all", marca: "all", tamanho: "all", cor: "all", preco: "all", disp: "all", origem: "all" };
 
 function FilterFields({ filters, setFilter, categories, brands, sizes, colors }) {
   const fields = [
@@ -25,6 +25,14 @@ function FilterFields({ filters, setFilter, categories, brands, sizes, colors })
   ];
   return (
     <div className="grid gap-4">
+      <label className="block">
+        <span className="mb-1.5 block text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground">Origem</span>
+        <select value={filters.origem} onChange={(event) => setFilter("origem", event.target.value)} className="control">
+          <option value="all">Todas as peças</option>
+          <option value="fornecedor">Referências de fornecedores</option>
+          <option value="loja">Vitrine da loja</option>
+        </select>
+      </label>
       {fields.map(([key, label, allLabel, options]) => (
         <label key={key} className="block">
           <span className="mb-1.5 block text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground">{label}</span>
@@ -44,9 +52,9 @@ function FilterFields({ filters, setFilter, categories, brands, sizes, colors })
         <span className="mb-1.5 block text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground">Disponibilidade</span>
         <select value={filters.disp} onChange={(event) => setFilter("disp", event.target.value)} className="control">
           <option value="all">Todas</option>
-          <option value="disponivel">Disponível</option>
+          <option value="disponivel">Disponível na loja</option>
           <option value="baixo">Últimas unidades</option>
-          <option value="indisponivel">Sob consulta</option>
+          <option value="indisponivel">Sob consulta / Encomenda</option>
         </select>
       </label>
     </div>
@@ -61,17 +69,23 @@ export default function CatalogPage() {
     ...emptyFilters,
     categoria: searchParams.get("categoria") || "all",
     marca: searchParams.get("marca") || "all",
+    origem: searchParams.get("origem") || "all",
   });
   const [favoritesOnly, setFavoritesOnly] = useState(searchParams.get("favoritos") === "1");
   const [filterOpen, setFilterOpen] = useState(false);
 
   useEffect(() => {
     setBusca(searchParams.get("busca") || "");
-    setFilters((current) => ({ ...current, categoria: searchParams.get("categoria") || "all", marca: searchParams.get("marca") || "all" }));
+    setFilters((current) => ({
+      ...current,
+      categoria: searchParams.get("categoria") || "all",
+      marca: searchParams.get("marca") || "all",
+      origem: searchParams.get("origem") || "all",
+    }));
     setFavoritesOnly(searchParams.get("favoritos") === "1");
   }, [searchParams]);
 
-  const visible = useMemo(() => products.filter((product) => !product.archived), [products]);
+  const visible = useMemo(() => products.filter((product) => !product.archived && product.publication !== "draft"), [products]);
   const categories = useMemo(() => [...new Set(visible.map((product) => product.category))].sort((a, b) => a.localeCompare(b, "pt-BR")), [visible]);
   const sizes = useMemo(() => [...new Set(visible.flatMap((product) => product.variations.map((variation) => variation.size)))], [visible]);
   const colors = useMemo(() => [...new Set(visible.flatMap((product) => product.variations.map((variation) => variation.color)))].sort((a, b) => a.localeCompare(b, "pt-BR")), [visible]);
@@ -79,7 +93,10 @@ export default function CatalogPage() {
   const filtered = useMemo(() => {
     const query = busca.trim().toLocaleLowerCase("pt-BR");
     return visible.filter((product) => {
+      const isSupplier = product.sourceType === "supplier-reference" || product.dataKind === "supplier-reference";
       if (favoritesOnly && !favorites.includes(product.id)) return false;
+      if (filters.origem === "fornecedor" && !isSupplier) return false;
+      if (filters.origem === "loja" && isSupplier) return false;
       if (query && !`${product.name} ${product.code} ${product.category} ${product.brand}`.toLocaleLowerCase("pt-BR").includes(query)) return false;
       if (filters.categoria !== "all" && product.category !== filters.categoria) return false;
       if (filters.marca !== "all" && product.brand !== filters.marca) return false;
@@ -105,7 +122,14 @@ export default function CatalogPage() {
   const activeFilters = [
     busca.trim() && { key: "busca", label: `Busca: ${busca.trim()}`, clear: () => setBusca("") },
     favoritesOnly && { key: "favoritos", label: "Meus favoritos", clear: () => { setFavoritesOnly(false); setSearchParams({}); } },
-    ...Object.entries(filters).filter(([, value]) => value !== "all").map(([key, value]) => ({ key, label: value, clear: () => setFilter(key, "all") })),
+    filters.origem !== "all" && {
+      key: "origem",
+      label: filters.origem === "fornecedor" ? "Referências de fornecedores" : "Vitrine da loja",
+      clear: () => setFilter("origem", "all"),
+    },
+    ...Object.entries(filters)
+      .filter(([key, value]) => key !== "origem" && value !== "all")
+      .map(([key, value]) => ({ key, label: value, clear: () => setFilter(key, "all") })),
   ].filter(Boolean);
 
   return (
@@ -162,7 +186,7 @@ export default function CatalogPage() {
 
         <div className="mt-8 grid gap-9 lg:grid-cols-[230px_1fr]">
           <aside className="hidden lg:block" aria-label="Filtros do catálogo">
-            <div className="sticky top-32 rounded-[var(--radius-card)] border border-border bg-card p-5 shadow-card">
+            <div className="rounded-[var(--radius-card)] border border-border bg-card p-5 shadow-card">
               <div className="mb-5 flex items-center justify-between">
                 <p className="font-semibold">Filtrar</p>
                 <button onClick={clearFilters} className="text-xs font-semibold text-signal hover:underline">Limpar</button>
@@ -174,7 +198,7 @@ export default function CatalogPage() {
             </div>
           </aside>
 
-          <main>
+          <div className="min-w-0">
             {visible.length === 0 ? (
               <EmptyState title="Catálogo vazio"><p>Novas peças cadastradas no painel aparecem aqui automaticamente.</p></EmptyState>
             ) : filtered.length === 0 ? (
@@ -186,7 +210,7 @@ export default function CatalogPage() {
                 {filtered.map((product) => <ProductCard key={product.id} product={product} />)}
               </div>
             )}
-          </main>
+          </div>
         </div>
       </div>
     </>

@@ -5,6 +5,7 @@ import { ArrowLeft, Check, Heart, MessageCircle, ShieldCheck } from "lucide-reac
 import { ProductImage, EmptyState } from "@/components/chrome";
 import { useStore, formatBRL, availableOf, buildWhatsAppMessage, waLink } from "@/lib/store";
 import { cn } from "@/lib/utils";
+import { SUPPLIER_REFERENCES } from "@/lib/supplierReferences";
 
 export default function ProductPage() {
   const { id } = useParams();
@@ -42,6 +43,8 @@ export default function ProductPage() {
   const message = variation ? buildWhatsAppMessage({ product, variation, kind }) : "";
   const link = variation ? waLink(config.whatsapp, message) : null;
   const favorite = favorites.includes(product.id);
+  const reference = SUPPLIER_REFERENCES.find(r => r.sourceUrl === product.sourceUrl || r.id === product.id);
+  const isSupplierRef = product.sourceType === "supplier-reference" || product.dataKind === "supplier-reference" || Boolean(reference);
 
   const selectColor = (nextColor) => {
     setColor(nextColor);
@@ -78,24 +81,50 @@ export default function ProductPage() {
                 ))}
               </div>
             )}
-            <div className={cn("relative aspect-[3/4] overflow-hidden rounded-[var(--radius-editorial)] bg-secondary", product.photos.length <= 1 && "lg:col-span-2")}>
-              <ProductImage src={product.photos[photoIndex] || product.photos[0]} alt={product.name} eager className="h-full w-full" />
+            <div className={cn("overflow-hidden rounded-[var(--radius-editorial)] bg-secondary", product.photos.length <= 1 && "lg:col-span-2")}>
+              <ProductImage src={product.photos[photoIndex] || product.photos[0]} alt={product.name} eager className="aspect-[3/4] w-full" />
               <button
                 onClick={() => toggleFavorite(product.id)}
                 aria-label={favorite ? "Remover dos favoritos" : "Adicionar aos favoritos"}
                 aria-pressed={favorite}
-                className={cn("absolute right-4 top-4 grid h-12 w-12 place-items-center rounded-full border border-white/80 bg-white/90 shadow-card backdrop-blur", favorite && "bg-foreground text-white")}
+                className={cn("button-light m-3", favorite && "border-foreground")}
               >
-                <Heart className={cn("h-5 w-5", favorite && "fill-current")} />
+                <Heart className={cn("h-5 w-5", favorite && "fill-current")} /> {favorite ? "Salvo nos favoritos" : "Salvar nos favoritos"}
               </button>
             </div>
           </div>
 
-          <div className="lg:sticky lg:top-32 lg:self-start">
+          <div className="lg:self-start">
             <p className="eyebrow">{product.brand}</p>
             <h1 className="mt-3 max-w-xl font-display text-4xl leading-[1.08] tracking-[-0.04em] sm:text-5xl">{product.name}</h1>
-            <p className="mt-3 text-sm text-muted-foreground">Cód. {product.code} · {product.category}</p>
-            <p className="mt-6 text-2xl font-semibold tracking-tight">{formatBRL(product.price)}</p>
+            <p className="mt-3 text-sm text-muted-foreground">
+              {product.supplierReference ? `Ref. ${product.supplierReference} · ` : ""}Cód. {product.code} · {product.category}
+            </p>
+
+            <div className="mt-5">
+              <p className="text-3xl font-semibold tracking-tight">{formatBRL(product.price)}</p>
+              {(product.pixPrice || product.supplierPixPrice || reference?.pixPrice) ? (
+                <p className="mt-1 text-sm font-semibold text-signal">
+                  {formatBRL(product.pixPrice || product.supplierPixPrice || reference?.pixPrice)} no Pix
+                </p>
+              ) : null}
+              {(product.supplierInstallments || reference?.supplierInstallments || reference?.installments) && (
+                <p className="mt-0.5 text-xs text-muted-foreground">
+                  {product.supplierInstallments || reference?.supplierInstallments || reference?.installments}
+                </p>
+              )}
+            </div>
+
+            {product.publication === "draft" && <p className="mt-3 text-sm text-signal">Prévia de rascunho — não aparece no catálogo.</p>}
+            {product.dataKind === "demo" && <p className="mt-2 text-sm text-muted-foreground">Dados de demonstração. Preço e estoque da RS Modas sujeitos à confirmação.</p>}
+            {isSupplierRef && (
+              <p className="mt-3 text-xs leading-relaxed text-muted-foreground">
+                Preço de referência do fornecedor, consultado em 10/09/2026. Confirme o valor e a disponibilidade com a RS Modas.
+                {(product.sourceUrl || reference?.sourceUrl) && (
+                  <> · <a href={product.sourceUrl || reference?.sourceUrl} target="_blank" rel="noreferrer" className="underline hover:text-foreground">Ver página original</a></>
+                )}
+              </p>
+            )}
             <p className="mt-5 text-base leading-relaxed text-muted-foreground">{product.description}</p>
 
             <div className="mt-8 border-t border-border pt-7">
@@ -135,17 +164,25 @@ export default function ProductPage() {
                   );
                 })}
               </div>
-              {variation && <p className={cn("mt-3 text-sm", available === 0 ? "font-medium text-signal" : "text-muted-foreground")} role="status">{available === 0 ? "Sem pronta entrega nesta variação. Consulte a possibilidade de encomenda." : `${available} ${available === 1 ? "unidade disponível" : "unidades disponíveis"} para consulta.`}</p>}
+              {variation && (
+                <p className={cn("mt-3 text-sm", available === 0 ? "font-medium text-signal" : "text-muted-foreground")} role="status">
+                  {available === 0
+                    ? (isSupplierRef ? "Sem pronta entrega local na RS Modas. Peça disponível para consulta de encomenda." : "Sem pronta entrega nesta variação. Consulte a possibilidade de encomenda.")
+                    : `${available} ${available === 1 ? "unidade disponível" : "unidades disponíveis"} para consulta.`}
+                </p>
+              )}
             </div>
 
             <div className="mt-7 rounded-[var(--radius-card)] bg-secondary p-4 sm:p-5">
               {!variation && <p className="mb-3 text-sm text-muted-foreground" role="status">Escolha cor e tamanho para preparar sua consulta.</p>}
               {variation && link ? (
                 <a href={link} target="_blank" rel="noreferrer" className="button-dark w-full px-4">
-                  <MessageCircle className="h-4 w-4" /> {available === 0 ? "Consultar encomenda" : "Consultar pelo WhatsApp"}
+                  <MessageCircle className="h-4 w-4" /> {available === 0 ? "Consultar encomenda pelo WhatsApp" : "Consultar pelo WhatsApp"}
                 </a>
               ) : (
-                <button disabled className="button-dark w-full cursor-not-allowed opacity-45"><MessageCircle className="h-4 w-4" /> Consultar pelo WhatsApp</button>
+                <button disabled className="button-dark w-full cursor-not-allowed opacity-45">
+                  <MessageCircle className="h-4 w-4" /> {available === 0 ? "Consultar encomenda pelo WhatsApp" : "Consultar pelo WhatsApp"}
+                </button>
               )}
               {variation && <button onClick={() => setShowPreview((value) => !value)} className="mt-3 min-h-10 w-full text-xs font-semibold text-muted-foreground hover:text-foreground">{showPreview ? "Ocultar mensagem" : "Ver mensagem antes de abrir"}</button>}
               {showPreview && variation && (

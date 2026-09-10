@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&family=Libre+Caslon+Text:ital,wght@0,400;0,700;1,400&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&display=swap');
 
 @tailwind base;
 @tailwind components;
@@ -39,7 +39,6 @@
 
   body {
     min-width: 320px;
-    overflow-x: clip;
     background: hsl(var(--background));
     color: hsl(var(--foreground));
     font-family: "Archivo", sans-serif;
@@ -54,7 +53,11 @@
   ::selection { background: hsl(var(--gold) / 0.35); }
 }
 
-.font-display { font-family: "Libre Caslon Text", Georgia, serif; }
+.font-display { font-family: "Archivo", Arial, sans-serif; font-weight: 500; }
+input, select, textarea { min-width: 0; max-width: 100%; }
+summary { cursor: pointer; }
+.admin-surface { border: 1px solid hsl(var(--border)); border-radius: var(--radius-card); background: hsl(var(--card)); padding: clamp(1rem, 3vw, 1.5rem); }
+.admin-surface h2 { font-size: 1.25rem; font-weight: 600; }
 
 @layer components {
   .page-shell { @apply mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8; }

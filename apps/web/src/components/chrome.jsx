@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Heart, ImageOff, Instagram, MapPin, Menu, MessageCircle, Search, Sparkles } from "lucide-react";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
-import { useStore, formatBRL, productStatus } from "@/lib/store";
+import { useStore, formatBRL, productStatus, productAvailable } from "@/lib/store";
 import { cn } from "@/lib/utils";
 
 const mapsLink = (address) => address
@@ -11,11 +11,10 @@ const mapsLink = (address) => address
 
 export function Logo({ compact = false }) {
   return (
-    <span className="inline-flex items-center gap-3">
-      <span className={cn("grid shrink-0 place-items-center overflow-hidden rounded-full bg-black", compact ? "h-10 w-10" : "h-12 w-12")}>
-        <img src="/rs-modas-logo.png" alt="" width="150" height="150" className="h-full w-full object-contain" />
+    <span className="inline-flex items-center">
+      <span className={cn("grid shrink-0 place-items-center overflow-hidden rounded-xl bg-black", compact ? "h-16 w-16" : "h-24 w-24")}>
+        <img src="/rs-modas-logo.png" alt="RS Modas" width="150" height="150" className="h-full w-full object-contain" />
       </span>
-      <span className={cn("font-display font-bold tracking-[-0.03em]", compact ? "text-lg" : "text-xl")}>RS Modas</span>
     </span>
   );
 }
@@ -23,8 +22,8 @@ export function Logo({ compact = false }) {
 export function DemoNotice() {
   const { config } = useStore();
   return (
-    <div className="fixed inset-x-0 top-0 z-[60] flex h-8 items-center justify-center bg-foreground px-4 text-background">
-      <p className="truncate text-xs tracking-wide">{config.demoNotice}</p>
+    <div className="bg-foreground px-4 py-2 text-center text-background">
+      <p className="text-xs leading-relaxed">{config.demoNotice}</p>
     </div>
   );
 }
@@ -57,6 +56,11 @@ export function ProductImage({ src, alt, className, eager = false }) {
 
 export function AvailabilityText({ product, className }) {
   const { config } = useStore();
+  if (product.sourceType === "supplier-reference" || product.dataKind === "supplier-reference") {
+    const hasLocal = productAvailable(product) > 0;
+    if (hasLocal) return <span className={cn("text-xs font-semibold text-signal", className)}>Disponível na loja</span>;
+    return <span className={cn("text-xs font-medium text-muted-foreground", className)}>Sob consulta / Encomenda</span>;
+  }
   const status = productStatus(product, config.lowStockThreshold);
   if (status === "indisponivel") return <span className={cn("text-xs font-semibold text-signal", className)}>Sob consulta</span>;
   if (status === "baixo") return <span className={cn("text-xs font-semibold text-signal", className)}>Últimas unidades</span>;
@@ -67,37 +71,44 @@ export function ProductCard({ product }) {
   const { favorites, toggleFavorite } = useStore();
   const sizes = [...new Set(product.variations.map((v) => v.size))];
   const favorite = favorites.includes(product.id);
+  const pixPrice = product.pixPrice || product.supplierPixPrice;
+
   return (
-    <article className="group relative min-w-0">
-      <Link to={`/produto/${product.id}`} className="block rounded-[var(--radius-card)] focus-visible:outline-none">
-        <div className="aspect-[3/4] overflow-hidden rounded-[var(--radius-card)] bg-secondary">
-          <ProductImage src={product.photos[0]} alt={product.name} className="h-full w-full transition-transform duration-500 group-hover:scale-[1.025]" />
-        </div>
-      </Link>
-      <button
-        type="button"
-        onClick={() => toggleFavorite(product.id)}
-        aria-label={favorite ? `Remover ${product.name} dos favoritos` : `Adicionar ${product.name} aos favoritos`}
-        aria-pressed={favorite}
-        className={cn(
-          "absolute right-3 top-3 grid h-11 w-11 place-items-center rounded-full border border-white/80 bg-white/90 text-foreground shadow-card backdrop-blur transition-transform hover:scale-105",
-          favorite && "bg-foreground text-white"
-        )}
-      >
-        <Heart className={cn("h-4 w-4", favorite && "fill-current")} />
-      </button>
-      <div className="px-1 pb-2 pt-4">
-        <div className="flex items-start justify-between gap-2">
-          <div className="min-w-0">
-            <p className="text-xs font-semibold uppercase tracking-[0.12em] text-signal">{product.brand}</p>
-            <Link to={`/produto/${product.id}`} className="mt-1 block font-display text-base leading-snug hover:text-signal md:text-lg">
-              {product.name}
-            </Link>
+    <article className="group relative flex h-full min-w-0 flex-col justify-between">
+      <div>
+        <Link to={`/produto/${product.id}`} className="block rounded-[var(--radius-card)] focus-visible:outline-none">
+          <div className="aspect-[3/4] overflow-hidden rounded-[var(--radius-card)] bg-secondary">
+            <ProductImage src={product.photos[0]} alt={product.name} className="h-full w-full transition-transform duration-500 group-hover:scale-[1.025]" />
           </div>
-          <p className="shrink-0 text-sm font-semibold">{formatBRL(product.price)}</p>
+        </Link>
+        <div className="px-1 pb-2 pt-4">
+          <div className="flex items-center justify-between gap-2">
+            <p className="text-xs font-semibold uppercase tracking-[0.12em] text-signal">{product.brand}</p>
+            <button
+              type="button"
+              onClick={() => toggleFavorite(product.id)}
+              aria-label={favorite ? `Remover ${product.name} dos favoritos` : `Adicionar ${product.name} aos favoritos`}
+              aria-pressed={favorite}
+              className="grid h-11 w-11 shrink-0 place-items-center rounded-full border border-border bg-card"
+            >
+              <Heart className={cn("h-4 w-4", favorite && "fill-current")} />
+            </button>
+          </div>
+          <Link to={`/produto/${product.id}`} className="mt-1 block font-display text-base leading-snug hover:text-signal md:text-lg">
+            {product.name}
+          </Link>
+          <div className="mt-2.5">
+            <p className="text-base font-semibold text-foreground">{formatBRL(product.price)}</p>
+            {pixPrice ? (
+              <p className="text-xs font-semibold text-signal">{formatBRL(pixPrice)} no Pix</p>
+            ) : null}
+          </div>
+          <p className="mt-2 truncate text-xs text-muted-foreground">{sizes.join(" · ")}</p>
+          <AvailabilityText product={product} className="mt-1 block" />
         </div>
-        <p className="mt-2 truncate text-xs text-muted-foreground">{sizes.join(" · ")}</p>
-        <AvailabilityText product={product} className="mt-1 block" />
+      </div>
+      <div className="px-1 pt-2">
+        <Link to={`/produto/${product.id}`} className="button-light w-full px-2 text-center">Ver peça</Link>
       </div>
     </article>
   );
@@ -145,16 +156,16 @@ export function Header() {
   const wa = config.whatsapp ? `https://wa.me/${config.whatsapp.replace(/\D/g, "")}` : null;
 
   return (
-    <header className="sticky top-8 z-40 border-b border-border bg-background/95 backdrop-blur-md">
-      <div className="page-shell flex h-[76px] items-center gap-3">
-        <div className="md:hidden">
+    <header className="border-b border-border bg-background">
+      <div className="page-shell flex min-h-20 items-center gap-2 py-2">
+        <div className="lg:hidden">
           <Sheet open={menuOpen} onOpenChange={setMenuOpen}>
             <SheetTrigger asChild>
               <button aria-label="Abrir menu" className="grid h-11 w-11 place-items-center rounded-xl border border-border bg-card">
                 <Menu className="h-5 w-5" />
               </button>
             </SheetTrigger>
-            <SheetContent side="left" className="w-[86vw] max-w-sm border-border p-0">
+            <SheetContent side="left" className="w-[86vw] max-w-sm overflow-y-auto border-border p-0">
               <SheetHeader className="border-b border-border p-5 text-left">
                 <SheetTitle><Logo /></SheetTitle>
                 <SheetDescription>Moda multimarcas com atendimento em Botucatu.</SheetDescription>

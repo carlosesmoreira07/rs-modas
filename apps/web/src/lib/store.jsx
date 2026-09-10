@@ -1,14 +1,29 @@
 import React, { createContext, useContext, useEffect, useState } from "react";
+import {
+  accessibleAccent,
+  moveVariation,
+  transitionInquiry,
+  formatBRL,
+  availableOf,
+  productAvailable,
+  buildWhatsAppMessage,
+} from "./operations";
+import { SUPPLIER_REFERENCES } from "./supplierReferences";
+
 
 const STORAGE_KEY = "rsmodas-demo-v1";
 
 export const DEFAULT_BRANDS = ["Pit Bull Jeans", "Rhero", "Maria Dondoca"];
 
 export const INQUIRY_STATUSES = [
-  { id: "nova", label: "Nova solicitação" },
+  { id: "nova", label: "Interesse — aguardando resposta" },
   { id: "fornecedor", label: "Consultar fornecedor" },
-  { id: "aguardando", label: "Aguardando confirmação" },
+  { id: "aguardando", label: "Aguardando cliente" },
   { id: "confirmada", label: "Encomenda confirmada" },
+  { id: "recebida", label: "Recebido" },
+  { id: "pronta", label: "Pronto para entregar" },
+  { id: "entregue", label: "Entregue" },
+  { id: "cancelada", label: "Cancelado" },
   { id: "encerrada", label: "Encerrada" },
 ];
 
@@ -18,6 +33,7 @@ export const MOVEMENT_TYPES = {
   reserva: "Reserva",
   liberacao: "Liberação de reserva",
   venda: "Venda confirmada",
+  correcao: "Correção de quantidade",
 };
 
 const IMG = {
@@ -94,7 +110,7 @@ function seedProducts() {
     { code: "RS-011", name: "Body Canelado Vinho", category: "Blusas", brand: "Rhero", price: 149.9, photo: IMG.p11, sizes: ["P", "M", "G"], colors: ["Vinho"], stock: (i) => (i === 1 ? 2 : 4), description: "Body canelado em tom vinho, de caimento ajustado e toque macio para usar com jeans e saias." },
     { code: "RS-012", name: "Blusa de Tricô Natural", category: "Blusas", brand: "Maria Dondoca", price: 219.8, photo: IMG.p9, sizes: ["P", "M", "G"], colors: ["Bege"], stock: () => 0, description: "Tricô macio em tom natural, com textura delicada para looks confortáveis em dias mais frescos." },
   ];
-  return defs.map((d, idx) => ({
+  const operational = defs.map((d, idx) => ({
     id: uid(),
     code: d.code,
     name: d.name,
@@ -106,14 +122,17 @@ function seedProducts() {
     sourceUrl: d.sourceUrl || "",
     variations: mkVariations(d.sizes, d.colors, d.stock),
     archived: false,
+    dataKind: "demo",
     createdAt: base - (defs.length - idx) * 60000,
   }));
+  return [...SUPPLIER_REFERENCES, ...operational];
 }
 
 function seedState() {
   const products = seedProducts();
   const movements = [];
   products.forEach((p) => {
+    if (p.dataKind === "supplier-reference") return;
     p.variations.forEach((v) => {
       if (v.physical > 0) {
         movements.push({
@@ -134,14 +153,26 @@ function seedState() {
 }
 
 function migrateState(parsed) {
-  const productBrands = Array.isArray(parsed.products) ? parsed.products.map((p) => p.brand).filter(Boolean) : [];
+  const existingIds = new Set((parsed.products || []).map((p) => p.id));
+  const missingSupplierRefs = SUPPLIER_REFERENCES.filter((r) => !existingIds.has(r.id));
+  const migratedProducts = [
+    ...missingSupplierRefs,
+    ...(Array.isArray(parsed.products)
+      ? parsed.products.map((p) => {
+          const ref = SUPPLIER_REFERENCES.find((r) => r.id === p.id || (r.sourceUrl && r.sourceUrl === p.sourceUrl));
+          if (ref) return { ...ref, ...p, dataKind: "supplier-reference", sourceType: "supplier-reference" };
+          return { ...p, dataKind: p.dataKind || "legacy" };
+        })
+      : []),
+  ];
+  const productBrands = migratedProducts.map((p) => p.brand).filter(Boolean);
   const brands = [...new Set([...(parsed.brands || []), ...DEFAULT_BRANDS, ...productBrands])].sort((a, b) => a.localeCompare(b, "pt-BR"));
   const config = { ...DEFAULT_CONFIG, ...(parsed.config || {}) };
   if (!config.address) config.address = DEFAULT_CONFIG.address;
   if (config.accentColor === "#c22f1e") config.accentColor = DEFAULT_CONFIG.accentColor;
   return {
     ...parsed,
-    products: Array.isArray(parsed.products) ? parsed.products : [],
+    products: migratedProducts,
     movements: Array.isArray(parsed.movements) ? parsed.movements : [],
     inquiries: Array.isArray(parsed.inquiries) ? parsed.inquiries : [],
     favorites: Array.isArray(parsed.favorites) ? parsed.favorites : [],
@@ -150,17 +181,7 @@ function migrateState(parsed) {
   };
 }
 
-export function formatBRL(value) {
-  const n = Number(value);
-  if (!Number.isFinite(n)) return "R$ 0,00";
-  return n.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
-}
-
-export const availableOf = (v) => Math.max(0, (v.physical || 0) - (v.reserved || 0));
-
-export function productAvailable(p) {
-  return p.variations.reduce((sum, v) => sum + availableOf(v), 0);
-}
+export { formatBRL, availableOf, productAvailable, buildWhatsAppMessage };
 
 export function productStatus(p, threshold = 3) {
   const total = productAvailable(p);
@@ -192,27 +213,6 @@ export function hexToHsl(hex) {
   return `${Math.round(h)} ${Math.round(s * 100)}% ${Math.round(l * 100)}%`;
 }
 
-export function buildWhatsAppMessage({ product, variation, kind }) {
-  const lines =
-    kind === "encomenda"
-      ? [
-          `Olá, ${"RS Modas"}! Gostaria de consultar a possibilidade de encomenda:`,
-          `• Produto: ${product.name}`,
-          `• Código: ${product.code}`,
-          `• Tamanho: ${variation.size}`,
-          `• Cor: ${variation.color}`,
-          "Podem me informar se é possível encomendar?",
-        ]
-      : [
-          "Olá, RS Modas! Vi uma peça no site e tenho interesse:",
-          `• Produto: ${product.name}`,
-          `• Código: ${product.code}`,
-          `• Tamanho: ${variation.size}`,
-          `• Cor: ${variation.color}`,
-          "Podem confirmar a disponibilidade?",
-        ];
-  return lines.join("\n");
-}
 
 export function waLink(whatsapp, message) {
   const digits = (whatsapp || "").replace(/\D/g, "");
@@ -245,12 +245,12 @@ export function StoreProvider({ children }) {
   }, [state]);
 
   useEffect(() => {
-    const hsl = hexToHsl(state.config.accentColor);
+    const hsl = hexToHsl(accessibleAccent(state.config.accentColor));
     if (hsl) document.documentElement.style.setProperty("--signal", hsl);
   }, [state.config.accentColor]);
 
   const saveProduct = (draft) => {
-    setState((prev) => {
+    const next = ((prev) => {
       const movements = [...prev.movements];
       const cleanVariations = (vars, oldMap, productId, productName) =>
         vars.map((v) => {
@@ -289,7 +289,11 @@ export function StoreProvider({ children }) {
       const product = { ...draft, id, variations, archived: false, createdAt: Date.now() };
         const brands = draft.brand && !prev.brands.includes(draft.brand) ? [...prev.brands, draft.brand].sort((a, b) => a.localeCompare(b, "pt-BR")) : prev.brands;
         return { ...prev, products: [product, ...prev.products], movements, brands };
-      });
+      })(state);
+    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(next)); }
+    catch { return { ok: false, error: "Não foi possível salvar neste navegador. O espaço pode estar cheio; reduza as fotos e tente novamente. Seus campos foram mantidos." }; }
+    setState(next);
+    return { ok: true };
   };
 
   const addBrand = (name) => {
@@ -319,14 +323,15 @@ export function StoreProvider({ children }) {
   };
 
   const addMovement = ({ productId, variationId, type, qty, reason }) => {
-    const q = Math.round(Number(qty));
-    if (!Number.isFinite(q) || q <= 0) {
+    const q = Number(qty);
+    if (!Number.isInteger(q) || q < 0 || (type !== "correcao" && q === 0)) {
       return { ok: false, error: "Informe uma quantidade inteira maior que zero." };
     }
     const product = state.products.find((p) => p.id === productId);
     if (!product) return { ok: false, error: "Produto não encontrado." };
     const variation = product.variations.find((v) => v.id === variationId);
     if (!variation) return { ok: false, error: "Variação não encontrada." };
+    try { moveVariation(variation, type, q); } catch (error) { return { ok: false, error: error.message }; }
     const avail = availableOf(variation);
     if (type === "reserva" && q > avail) {
       return { ok: false, error: `Reserva acima do disponível (${avail} un.).` };
@@ -344,12 +349,7 @@ export function StoreProvider({ children }) {
           ...p,
           variations: p.variations.map((v) => {
             if (v.id !== variationId) return v;
-            const nv = { ...v };
-            if (type === "entrada") nv.physical += q;
-            if (type === "reserva") nv.reserved += q;
-            if (type === "liberacao") nv.reserved -= q;
-            if (type === "venda") { nv.physical -= q; nv.reserved -= q; }
-            return nv;
+            return moveVariation(v, type, q);
           }),
         };
       });
@@ -366,8 +366,8 @@ export function StoreProvider({ children }) {
   const addInquiry = ({ ref, productId, size, color, qty, note }) => {
     const product = state.products.find((p) => p.id === productId);
     if (!product) return { ok: false, error: "Selecione um produto." };
-    const q = Math.round(Number(qty));
-    if (!Number.isFinite(q) || q <= 0) return { ok: false, error: "Quantidade deve ser um inteiro maior que zero." };
+    const q = Number(qty);
+    if (!Number.isInteger(q) || q <= 0) return { ok: false, error: "Quantidade deve ser um inteiro maior que zero." };
     if (!size.trim() || !color.trim()) return { ok: false, error: "Informe tamanho e cor." };
     const inquiry = {
       id: uid(),
@@ -387,10 +387,11 @@ export function StoreProvider({ children }) {
   };
 
   const setInquiryStatus = (id, status) => {
-    setState((prev) => ({
-      ...prev,
-      inquiries: prev.inquiries.map((i) => (i.id === id ? { ...i, status } : i)),
-    }));
+    try {
+      const next = transitionInquiry(state, id, status, uid);
+      setState(next);
+      return { ok: true };
+    } catch (error) { return { ok: false, error: error.message }; }
   };
 
   const updateConfig = (patch) => {

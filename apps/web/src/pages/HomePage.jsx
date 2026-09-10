@@ -14,13 +14,18 @@ const styleLinks = [
 
 export default function HomePage() {
   const { products, config, brands } = useStore();
-  const visible = products.filter((product) => !product.archived);
-  const featured = visible.filter((product) => productStatus(product, config.lowStockThreshold) !== "indisponivel").slice(0, 4);
+  const visible = products.filter((product) => !product.archived && product.publication !== "draft");
+  const realProducts = visible.filter((p) => p.sourceType === "supplier-reference" || p.dataKind === "supplier-reference");
+  const demoProducts = visible.filter((p) => p.sourceType !== "supplier-reference" && p.dataKind !== "supplier-reference");
+  const featured = (demoProducts.length > 0 ? demoProducts : visible)
+    .filter((product) => productStatus(product, config.lowStockThreshold) !== "indisponivel")
+    .slice(0, 4);
+
   const categoryNames = ["Calças", "Vestidos", "Conjuntos", "Blusas", "Jaquetas", "Shorts"];
   const categories = categoryNames
     .map((name) => ({ name, product: visible.find((product) => product.category === name) }))
     .filter((item) => item.product);
-  const heroProduct = visible.find((product) => product.brand === "Pit Bull Jeans") || visible[0];
+  const heroProduct = realProducts[0] || visible.find((product) => product.brand === "Pit Bull Jeans") || visible[0];
   const wa = config.whatsapp ? `https://wa.me/${config.whatsapp.replace(/\D/g, "")}` : null;
   const mapLink = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(config.address)}`;
 
@@ -47,20 +52,20 @@ export default function HomePage() {
             </div>
             <div className="mt-8 flex items-center gap-3 border-t border-foreground/10 pt-5 text-sm text-muted-foreground">
               <BadgeCheck className="h-5 w-5 shrink-0 text-signal" />
-              <span>Revendedora autorizada do grupo Pit Bull Jeans, Rhero e Maria Dondoca.</span>
+              <span>Revendedora oficial, conforme informado pela RS Modas.</span>
             </div>
           </div>
 
-          <div className="relative min-h-[410px] overflow-hidden lg:min-h-0">
+          <div className="flex min-w-0 flex-col">
             <img
               src={HERO_IMAGE}
               alt="Mulher com camisa branca e jeans em composição editorial clara"
               width="900"
               height="1100"
               fetchPriority="high"
-              className="absolute inset-0 h-full w-full object-cover object-right"
+              className="min-h-0 w-full flex-1 object-cover object-center"
             />
-            <div className="absolute bottom-4 left-4 right-4 flex items-end justify-between gap-3 rounded-2xl bg-white/92 p-4 shadow-soft backdrop-blur-md sm:bottom-6 sm:left-6 sm:right-auto sm:w-72">
+            <div className="flex items-center justify-between gap-3 bg-card p-4">
               <div>
                 <p className="text-xs font-semibold uppercase tracking-[0.13em] text-signal">Em destaque</p>
                 <p className="mt-1 font-display text-lg leading-snug">{heroProduct?.name}</p>
@@ -70,6 +75,34 @@ export default function HomePage() {
           </div>
         </div>
       </section>
+
+      {realProducts.length > 0 && (
+        <section className="page-shell py-12 lg:py-16" aria-labelledby="real-products-title">
+          <Reveal>
+            <div className="grid gap-4 md:grid-cols-[1fr_auto] md:items-end">
+              <div>
+                <p className="eyebrow">Referências reais de fornecedores</p>
+                <h2 id="real-products-title" className="mt-2 font-display text-3xl tracking-[-0.03em] sm:text-4xl">
+                  Peças verificadas das marcas oficiais
+                </h2>
+                <p className="mt-3 max-w-2xl text-sm leading-relaxed text-muted-foreground">
+                  Fotografia oficial e valores consultados diretamente nos fornecedores em 10/09/2026. Preços e disponibilidade de encomenda sujeitos à confirmação pela RS Modas.
+                </p>
+              </div>
+              <Link to="/catalogo?origem=fornecedor" className="button-light justify-self-start">
+                Ver referências <ArrowRight className="h-4 w-4" />
+              </Link>
+            </div>
+          </Reveal>
+          <div className="mt-8 grid grid-cols-2 gap-x-3 gap-y-8 sm:gap-x-5 md:grid-cols-3 lg:grid-cols-5 lg:gap-x-6">
+            {realProducts.map((product, index) => (
+              <Reveal key={product.id} delay={index * 0.04}>
+                <ProductCard product={product} />
+              </Reveal>
+            ))}
+          </div>
+        </section>
+      )}
 
       <section className="page-shell py-12 lg:py-16" aria-labelledby="categories-title">
         <Reveal>
@@ -84,9 +117,9 @@ export default function HomePage() {
         <div className="mt-7 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6 lg:gap-4">
           {categories.map(({ name, product }, index) => (
             <Reveal key={name} delay={index * 0.04}>
-              <Link to={`/catalogo?categoria=${encodeURIComponent(name)}`} className="group relative block aspect-[4/5] overflow-hidden rounded-[var(--radius-card)] bg-secondary">
-                <img src={product.photos[0]} alt="" loading="lazy" className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-[1.035]" />
-                <div className="absolute inset-x-0 bottom-0 bg-foreground/82 px-4 py-3 text-center text-sm font-semibold text-white backdrop-blur-sm">{name}</div>
+              <Link to={`/catalogo?categoria=${encodeURIComponent(name)}`} className="group block overflow-hidden rounded-[var(--radius-card)] border border-border bg-card">
+                <img src={product.photos[0]} alt="" loading="lazy" className="aspect-[4/5] w-full object-cover" />
+                <div className="px-3 py-3 text-center text-sm font-semibold text-foreground">{name}</div>
               </Link>
             </Reveal>
           ))}
@@ -100,7 +133,7 @@ export default function HomePage() {
               <div>
                 <p className="eyebrow">Seleção RS</p>
                 <h2 id="featured-title" className="mt-2 font-display text-3xl tracking-[-0.03em] sm:text-4xl">Peças para olhar de perto</h2>
-                <p className="mt-3 max-w-xl text-sm leading-relaxed text-muted-foreground">Destaques da nossa vitrine atual. Escolha cor e tamanho antes de consultar a disponibilidade.</p>
+                <p className="mt-3 max-w-xl text-sm leading-relaxed text-muted-foreground">Destaques da nossa vitrine demonstrativa. Escolha cor e tamanho antes de consultar a disponibilidade.</p>
               </div>
               <Link to="/catalogo" className="button-light justify-self-start">Catálogo completo <ArrowRight className="h-4 w-4" /></Link>
             </div>
@@ -143,7 +176,7 @@ export default function HomePage() {
               <div className="flex flex-wrap gap-2.5">
                 {brands.map((brand) => <Link key={brand} to={`/catalogo?marca=${encodeURIComponent(brand)}`} className="rounded-full border border-border bg-card px-5 py-3 text-sm font-semibold hover:border-foreground">{brand}</Link>)}
               </div>
-              <p className="mt-5 text-sm leading-relaxed text-muted-foreground">Pit Bull Jeans, Rhero e Maria Dondoca pertencem ao mesmo grupo. A RS Modas trabalha como revendedora autorizada e pode ampliar sua seleção com novas marcas.</p>
+              <p className="mt-5 text-sm leading-relaxed text-muted-foreground">Pit Bull Jeans, Rhero, Maria Dondoca e outras marcas selecionadas pela RS Modas.</p>
             </div>
           </div>
         </Reveal>
